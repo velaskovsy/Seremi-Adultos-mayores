@@ -1,4 +1,33 @@
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'viewmodels/login_viewmodel.dart';
+import 'views/login/login_screen.dart';
+
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => LoginViewModel(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Seremi Adultos Mayores',
+      debugShowCheckedModeBanner: false,
+      home: LoginScreen(),
+    );
+  }
+}
+
+
+/*import 'package:flutter/material.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,9 +57,9 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: .fromSeed(seedColor: Colors.lightBlue),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'TF is this'),
     );
   }
 }
@@ -119,4 +148,4 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
-}
+}*/
