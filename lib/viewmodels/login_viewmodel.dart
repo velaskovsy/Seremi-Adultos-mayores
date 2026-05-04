@@ -44,7 +44,7 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     }
     if (!_rut.contains('-') || _rut.length < 9) {
-      _errorRut = 'Formato inválido.';
+      _errorRut = 'Formato inválido';
       return false;
     }
     return true;
@@ -57,7 +57,7 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     }
     if (_pin.length != 4) {
-      _errorPin = 'La contraseña debe tener 4 números.';
+      _errorPin = 'La contraseña debe tener 4 números';
       return false;
     }
     return true;

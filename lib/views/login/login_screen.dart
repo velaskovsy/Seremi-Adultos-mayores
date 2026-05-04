@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../viewmodels/login_viewmodel.dart';
-import 'widgets/login_input_field.dart';
+import '../../core/widgets/input_field.dart';
+import '../register/register_step1_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   @override
@@ -49,7 +50,7 @@ class LoginScreen extends StatelessWidget {
             const SizedBox(height: 30),
 
             // CAMPO RUT
-            LoginInputField(
+            InputField(
               label: 'RUT (SIN PUNTOS, CON GUIÓN)',
               hint: '12345678-9',
               isPassword: false,
@@ -64,7 +65,7 @@ class LoginScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // CAMPO CONTRASEÑA (PIN)
-            LoginInputField(
+            InputField(
               label: 'CONTRASEÑA',
               hint: '****',
               isPassword: true,
@@ -139,8 +140,11 @@ class LoginScreen extends StatelessWidget {
 
             // Opción de REGISTRARSE
             TextButton(
-              onPressed: () {
-                // TODO: navegar a pantalla de registro
+              onPressed: (){
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterStep1Screen()),
+                );
               },
               child: const Text(
                 'REGISTRARSE',

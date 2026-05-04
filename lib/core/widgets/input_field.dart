@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class LoginInputField extends StatelessWidget {
+class InputField extends StatelessWidget {
   final String label;
   final String hint;
   final bool isPassword;
-  final bool passwordVisible;       // Solo se usa si isPassword es true
-  final String? errorText;          // Muestra error debajo del campo
+  final bool passwordVisible; // Solo se usa si isPassword es true
+  final String? errorText; // Muestra error debajo del campo
   final Function(String) onChanged;
   final VoidCallback? onToggleVisibility; // Solo se usa si isPassword es true
   final double verticalPadding;
   final double hintFontSize;
+  final TextInputType keyboardType;
 
-  const LoginInputField({
+  const InputField({
     Key? key,
     required this.label,
     required this.hint,
-    required this.isPassword,
     required this.onChanged,
+    this.isPassword = false,
     this.passwordVisible = false,
     this.errorText,
     this.onToggleVisibility,
     this.verticalPadding = 28,
     this.hintFontSize = 32,
+    this.keyboardType = TextInputType.text,
   }) : super(key: key);
 
   @override
@@ -57,11 +59,7 @@ class LoginInputField extends StatelessWidget {
             child: TextField(
               obscureText: isPassword && !passwordVisible,
               textAlign: TextAlign.center,
-              // PIN: solo números. RUT: teclado normal
-              keyboardType: isPassword
-                  ? TextInputType.number
-                  : TextInputType.text,
-              // PIN: máximo 4 caracteres
+              keyboardType: isPassword ? TextInputType.number : keyboardType,
               inputFormatters: isPassword
                   ? [
                 FilteringTextInputFormatter.digitsOnly,
@@ -78,22 +76,21 @@ class LoginInputField extends StatelessWidget {
                 hintText: hint,
                 hintStyle: TextStyle(
                   fontSize: hintFontSize,
-                  color: const Color(0xFF000080).withOpacity(0.5),
+                  color: const Color(0xFF000080).withValues(alpha: 0.5),
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: verticalPadding,
+                  horizontal: 16,
+                  vertical: verticalPadding,
                 ),
-                // Ícono de ojo solo en el campo de contraseña
                 suffixIcon: isPassword
                     ? IconButton(
                   icon: Icon(
                     passwordVisible
                         ? Icons.visibility_off
                         : Icons.visibility,
-                    color: Colors.black54,
-                    size: 40,
+                    color: Colors.black,
+                    size: 45,
                   ),
                   onPressed: onToggleVisibility,
                 )
@@ -103,13 +100,13 @@ class LoginInputField extends StatelessWidget {
           ),
         ),
 
-        // Mensaje de error debajo del campo
+        // Mensaje de error
         if (errorText != null)
           Padding(
             padding: const EdgeInsets.only(left: 34, top: 6),
             child: Text(
               errorText!,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.red,
                 fontSize: 24,
               ),

@@ -2,12 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'viewmodels/login_viewmodel.dart';
+import 'viewmodels/register_viewmodel.dart';
 import 'views/login/login_screen.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => LoginViewModel(),
+    MultiProvider(
+        providers: [
+        ChangeNotifierProvider(create: (_) => LoginViewModel()), ChangeNotifierProvider(create: (_) => RegisterViewModel()),],
       child: const MyApp(),
     ),
   );
