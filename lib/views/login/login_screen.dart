@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../viewmodels/login_viewmodel.dart';
 import '../../core/widgets/input_field.dart';
 import '../register/register_step1_screen.dart';
+import '../home/home_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   @override
@@ -12,13 +13,13 @@ class LoginScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
+        body: SingleChildScrollView(
         child: Column(
           children: [
 
             // HEADER
             Container(
-              width: 412,
+              width: 450,
               height: 135,
               color: const Color(0xFF000080),
               alignment: Alignment.center,
@@ -120,7 +121,15 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                   // Si está cargando, deshabilita el botón
-                  onPressed: vm.isLoading ? null : vm.login,
+                  onPressed: vm.isLoading ? null : () async {
+                    await vm.login();
+                    if (vm.errorRut == null && vm.errorPin == null) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    }
+                  },
                   child: vm.isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
