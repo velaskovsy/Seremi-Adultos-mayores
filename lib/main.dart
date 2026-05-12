@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/register_viewmodel.dart';
 import 'views/login/login_screen.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(
@@ -23,6 +23,18 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Seremi Adultos Mayores',
       debugShowCheckedModeBanner: false,
+      // Esto sirve para bloquear el tamaño de fuente de texto, ya que si un adulto mayor tiene su teléfono con letras grandes
+      // la aplicación también va a cambiar el tipo de letra a algo más grande, provocando que se vea más desordenado y que algunos
+      // textos de los hints queden incompletos, pudiendo causar confusión en el usuario.
+      // La idea es que en el diseño como tal hayan letras de gran tamaño cosa de respetar la accesibilidad para el adulto mayor.
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(1.0),
+          ),
+          child: child!,
+        );
+      },
       home: LoginScreen(),
     );
   }

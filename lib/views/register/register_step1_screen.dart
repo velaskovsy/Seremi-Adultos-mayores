@@ -9,6 +9,10 @@ class RegisterStep1Screen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    final size = MediaQuery.of(context).size;
+    final anchoPantalla = size.width;
+    final alturaPantalla = size.height;
     final vm = Provider.of<RegisterViewModel>(context);
 
     return Scaffold(
@@ -16,10 +20,10 @@ class RegisterStep1Screen extends StatelessWidget {
       body: Column(
         children: [
 
-          // ── HEADER ────────────────────────────────────────
+          // HEADER
           Container(
-            width: 412,
-            height: 135,
+            width: double.infinity,
+            height: alturaPantalla * 0.147,
             color: const Color(0xFF000080),
             child: Row(
               children: [
@@ -74,12 +78,12 @@ class RegisterStep1Screen extends StatelessWidget {
 
                   // Texto guía
                   const Padding(
-                    padding: EdgeInsets.only(left: 34),
+                    padding: EdgeInsets.only(left: 25),
                     child: Text(
                       'Ingrese los datos del adulto mayor',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 18,
+                        fontSize: 24,
                         color: Color(0xFF000080),
                         fontWeight: FontWeight.bold,
                       ),
@@ -95,7 +99,7 @@ class RegisterStep1Screen extends StatelessWidget {
                     onChanged: vm.setNombre,
                     errorText: vm.errorNombre,
                     hintFontSize: 30,
-                    verticalPadding: 20,
+                    verticalPadding: 17,
                   ),
 
                   const SizedBox(height: 20),
@@ -107,7 +111,7 @@ class RegisterStep1Screen extends StatelessWidget {
                     onChanged: vm.setRut,
                     errorText: vm.errorRut,
                     hintFontSize: 30,
-                    verticalPadding: 20,
+                    verticalPadding: 17,
                   ),
 
                   const SizedBox(height: 20),
