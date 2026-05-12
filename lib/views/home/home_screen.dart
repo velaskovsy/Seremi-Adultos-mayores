@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/app_footer.dart';
+import '../reminder/add_reminder_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -121,7 +122,10 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
                             onPressed: () {
-                              // TODO: navegar a pantalla de añadir recordatorio
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const AddReminderScreen()),
+                              );
                             },
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -186,7 +190,7 @@ class HomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    //  FRANJA MAÑANA
+                    // FRANJA MAÑANA
                     _buildFranja(
                       color: const Color(0xFFFFE0B2),
                       icono: Icons.wb_twilight,
@@ -215,7 +219,7 @@ class HomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // ── FRANJA NOCHE ──────────────────────────
+                    // FRANJA NOCHE
                     _buildFranja(
                       color: const Color(0xFFE8EAF6),
                       icono: Icons.nightlight_round,
@@ -233,14 +237,14 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
 
-            // ── FOOTER ──────────────────────────────────────
+            // FOOTER
             const AppFooter(),
           ],
         ),
     );
   }
 
-  // ── Widget de franja horaria ─────────────────────────────
+  // Widget de franja horaria
   Widget _buildFranja({
     required Color color,
     required IconData icono,
@@ -254,7 +258,7 @@ class HomeScreen extends StatelessWidget {
   }) {
     return Column(
     children: [
-      // ── Barra de color con título ──
+      // Barra de color con título
       Container(
         width: double.infinity,
         color: color,
@@ -276,13 +280,13 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
 
-      // ── Imagen y mensaje fuera del color ──
+      // Imagen y mensaje fuera del color
       if (vacio)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
             children: [
-              Image.asset(imagenVacio, width: 80, height: 80,
+              Image.asset(imagenVacio, width: 120, height: 120,
                   fit: BoxFit.contain),
               const SizedBox(height: 8),
               Text(
@@ -290,7 +294,7 @@ class HomeScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'Roboto',
-                  fontSize: 18,
+                  fontSize: 24,
                   color: Colors.black54,
                 ),
               ),
