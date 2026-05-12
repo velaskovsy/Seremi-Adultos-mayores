@@ -37,14 +37,16 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Valida el formato del RUT
   bool _validarRut() {
     if (_rut.isEmpty) {
       _errorRut = 'Ingrese su RUT';
       return false;
     }
-    if (!_rut.contains('-') || _rut.length < 9) {
-      _errorRut = 'Formato inválido';
+
+    // Formato: 1-8 números, guión, 1 dígito o K
+    final regex = RegExp(r'^\d{7,8}-[\dkK]$');
+    if (!regex.hasMatch(_rut)) {
+      _errorRut = 'Formato inválido. Ejemplo: 12345678-9';
       return false;
     }
     return true;
