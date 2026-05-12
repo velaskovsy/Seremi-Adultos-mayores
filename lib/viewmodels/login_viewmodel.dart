@@ -1,37 +1,39 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
-  // Las variables se escriben con un _ porque son privadas
+  final AuthService _authService = AuthService();
+
   String _rut = '';
   String _pin = '';
   bool _isLoading = false;
   bool _pinVisible = false;
   String? _errorRut;
   String? _errorPin;
+  String? _errorGeneral; // Para errores del servidor
 
-  // Getters (la View solo puede leer)
   bool get isLoading => _isLoading;
   bool get pinVisible => _pinVisible;
   String? get errorRut => _errorRut;
   String? get errorPin => _errorPin;
+  String? get errorGeneral => _errorGeneral;
 
-  // Actualiza el RUT mientras el usuario escribe
   void setRut(String value) {
     _rut = value;
-    _errorRut = null; // Limpia el error al volver a escribir
+    _errorRut = null;
+    _errorGeneral = null;
     notifyListeners();
   }
 
-  // Actualiza el PIN, el cual solo acepta números y máximo 4 dígitos
   void setPin(String value) {
     if (value.length <= 4 && RegExp(r'^\d*$').hasMatch(value)) {
       _pin = value;
-      _errorPin = null; // Limpia el error al volver a escribir
+      _errorPin = null;
+      _errorGeneral = null;
       notifyListeners();
     }
   }
 
-  // Muestra u oculta el PIN
   void togglePinVisible() {
     _pinVisible = !_pinVisible;
     notifyListeners();
@@ -42,8 +44,6 @@ class LoginViewModel extends ChangeNotifier {
       _errorRut = 'Ingrese su RUT';
       return false;
     }
-
-    // Formato: 1-8 números, guión, 1 dígito o K
     final regex = RegExp(r'^\d{7,8}-[\dkK]$');
     if (!regex.hasMatch(_rut)) {
       _errorRut = 'Formato inválido. Ejemplo: 12345678-9';
@@ -52,7 +52,6 @@ class LoginViewModel extends ChangeNotifier {
     return true;
   }
 
-  // Valida que el PIN tenga exactamente 4 dígitos
   bool _validarPin() {
     if (_pin.isEmpty) {
       _errorPin = 'Ingrese su contraseña';
@@ -65,30 +64,33 @@ class LoginViewModel extends ChangeNotifier {
     return true;
   }
 
-  // Lógica principal del login
-  Future<void> login() async {
-    // Limpia errores anteriores
+  /// Retorna true si el login fue exitoso
+  Future<bool> login() async {
     _errorRut = null;
     _errorPin = null;
+    _errorGeneral = null;
 
-    // Valida ambos campos antes de llamar al servidor
     final rutValido = _validarRut();
     final pinValido = _validarPin();
-
     if (!rutValido || !pinValido) {
       notifyListeners();
-      return;
+      return false;
     }
 
-    // Todo válido: muestra loading y llama al servidor
     _isLoading = true;
     notifyListeners();
 
-    // TODO: reemplazar con llamada real a Railway
-    // final usuario = await _authService.login(_rut, _pin);
-    await Future.delayed(const Duration(seconds: 2)); // Simulación temporal
+    final result = await _authService.login(_rut, _pin);
 
     _isLoading = false;
-    notifyListeners();
+
+    if (result.success) {
+      notifyListeners();
+      return true;
+    } else {
+      _errorGeneral = result.error;
+      notifyListeners();
+      return false;
+    }
   }
 }
