@@ -14,7 +14,7 @@ class AuthResult {
 class AuthService {
   // ⚠️ Cambia esta URL por la de tu servicio en Railway al desplegarlo
   // Ejemplo: 'https://seremi-api-production.up.railway.app'
-  static const String _baseUrl = 'https://TU-SERVICIO.up.railway.app';
+  static const String _baseUrl = 'https://servidorappseremi-production.up.railway.app';
 
   static const String _tokenKey = 'auth_token';
   static const String _usuarioKey = 'usuario';
