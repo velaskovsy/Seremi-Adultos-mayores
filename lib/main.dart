@@ -4,12 +4,13 @@ import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/register_viewmodel.dart';
 import 'views/login/login_screen.dart';
 import 'package:flutter/services.dart';
+import 'viewmodels/home_viewmodel.dart';
 
 void main() {
   runApp(
     MultiProvider(
         providers: [
-        ChangeNotifierProvider(create: (_) => LoginViewModel()), ChangeNotifierProvider(create: (_) => RegisterViewModel()),],
+        ChangeNotifierProvider(create: (_) => LoginViewModel()),ChangeNotifierProvider(create: (_) => HomeViewModel()), ChangeNotifierProvider(create: (_) => RegisterViewModel()),],
       child: const MyApp(),
     ),
   );
