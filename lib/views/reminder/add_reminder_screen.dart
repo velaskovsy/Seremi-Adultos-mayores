@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../add medication/add_medication_step_1_screen.dart';
+
 class AddReminderScreen extends StatelessWidget {
   const AddReminderScreen({Key? key}) : super(key: key);
 
@@ -70,7 +72,10 @@ class AddReminderScreen extends StatelessWidget {
                       colorIcono: const Color(0xFF4CAF50),
                       label: 'Medicamento',
                       onTap: () {
-                        // TODO: navegar a pantalla de medicamento
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AddMedicationStep1Screen()),
+                        );
                       },
                     ),
 
