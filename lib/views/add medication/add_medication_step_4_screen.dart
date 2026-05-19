@@ -1,3 +1,4 @@
+// lib/views/add medication/add_medication_step_4_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -150,7 +151,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(left: 16),
                     child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: vm.guardando ? null : () => Navigator.pop(context),
                       child: Container(
                         width: 46,
                         height: 46,
@@ -195,7 +196,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                   children: [
 
                     // Título
-                    Center(
+                    const Center(
                       child: Text(
                         'Añade instrucciones y\nreferencias visuales',
                         textAlign: TextAlign.center,
@@ -248,7 +249,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
 
                     const SizedBox(height: 30),
 
-                    // FOTOS
+                    // FOTOS (solo visual por ahora, no se suben al servidor)
                     const Text(
                       'FOTOS',
                       style: TextStyle(
@@ -299,31 +300,60 @@ class AddMedicationStep4Screen extends StatelessWidget {
                           height: 65,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF8800),
+                              backgroundColor: vm.guardando
+                                  ? Colors.grey
+                                  : const Color(0xFFFF8800),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15),
-                                side: const BorderSide(
-                                    color: Color(0xFFFF8800), width: 2),
+                                side: BorderSide(
+                                  color: vm.guardando
+                                      ? Colors.grey
+                                      : const Color(0xFFFF8800),
+                                  width: 2,
+                                ),
                               ),
                             ),
-                            onPressed: () async {
-                              await vm.guardar();
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const HomeScreen()),
-                                    (route) => false,
-                              );
-                            },
-                            child: const Text(
-                              'Guardar',
-                              style: TextStyle(
-                                fontFamily: 'Roboto',
-                                fontSize: 32,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            // Deshabilitado mientras guarda
+                            onPressed: vm.guardando
+                                ? null
+                                : () async {
+                                    final exito = await vm.guardar();
+
+                                    if (exito) {
+                                      // Éxito: volver al home
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => const HomeScreen()),
+                                        (route) => false,
+                                      );
+                                    } else {
+                                      // Error: mostrar snackbar
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Error al guardar. Verifica tu conexión e intenta de nuevo.',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                            child: vm.guardando
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  )
+                                : const Text(
+                                    'Guardar',
+                                    style: TextStyle(
+                                      fontFamily: 'Roboto',
+                                      fontSize: 32,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
