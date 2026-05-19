@@ -1,8 +1,11 @@
+// lib/viewmodels/add_medication_viewmodel.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/medicamento_service.dart';
 
 class AddMedicationViewModel extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
+  final MedicamentoService _medicamentoService = MedicamentoService();
 
   // Paso 1: nombre y dosis
   String _nombre = '';
@@ -27,12 +30,16 @@ class AddMedicationViewModel extends ChangeNotifier {
     'Cada hora',
   ];
 
-  //  Paso 4: instrucciones y fotos
+  // Paso 4: instrucciones y fotos
   String _instrucciones = '';
   XFile? _fotoCaja;
   XFile? _fotoRemedio;
 
-  // Getters
+  // Estado de carga
+  bool _guardando = false;
+
+  // ─── Getters ──────────────────────────────────────────────
+
   String get nombre => _nombre;
   String get dosis => _dosis;
   String? get errorNombre => _errorNombre;
@@ -47,6 +54,8 @@ class AddMedicationViewModel extends ChangeNotifier {
   XFile? get fotoCaja => _fotoCaja;
   XFile? get fotoRemedio => _fotoRemedio;
 
+  bool get guardando => _guardando;
+
   // Texto de fecha para mostrar en pantalla
   String get fechaTexto {
     if (_fecha == null) return 'Seleccionar';
@@ -60,14 +69,15 @@ class AddMedicationViewModel extends ChangeNotifier {
     return '${_fecha!.day}/${_fecha!.month}/${_fecha!.year}';
   }
 
-  // Texto de hora para mostrar en pantalla
+  // Texto de hora para mostrar en pantalla y enviar al servidor
   String get horaTexto {
     final h = _hora.hour.toString().padLeft(2, '0');
     final m = _hora.minute.toString().padLeft(2, '0');
     return '$h:$m';
   }
 
-  // Setters paso 1
+  // ─── Setters paso 1 ───────────────────────────────────────
+
   void setNombre(String value) {
     _nombre = value;
     _errorNombre = null;
@@ -80,7 +90,8 @@ class AddMedicationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Setters paso 2
+  // ─── Setters paso 2 ───────────────────────────────────────
+
   void setFecha(DateTime fecha) {
     _fecha = fecha;
     notifyListeners();
@@ -91,19 +102,21 @@ class AddMedicationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Setters paso 3
+  // ─── Setters paso 3 ───────────────────────────────────────
+
   void setIntervalo(String value) {
     _intervalo = value;
     notifyListeners();
   }
 
-  //Setters paso 4
+  // ─── Setters paso 4 ───────────────────────────────────────
+
   void setInstrucciones(String value) {
     _instrucciones = value;
     notifyListeners();
   }
 
-  //Foto desde galería o cámara
+  // Foto desde galería o cámara
   Future<XFile?> tomarFoto(ImageSource source) async {
     final foto = await _picker.pickImage(source: source);
     return foto;
@@ -119,7 +132,8 @@ class AddMedicationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Validación paso 1
+  // ─── Validación paso 1 ────────────────────────────────────
+
   bool validarPaso1() {
     bool valido = true;
 
@@ -136,9 +150,24 @@ class AddMedicationViewModel extends ChangeNotifier {
     return valido;
   }
 
-  // Guardar medicamento
-  Future<void> guardar() async {
-    // TODO: conectar con Railway
-    await Future.delayed(const Duration(seconds: 1));
+  // ─── Guardar: conectado a Railway ─────────────────────────
+
+  Future<bool> guardar() async {
+    _guardando = true;
+    notifyListeners();
+
+    final exito = await _medicamentoService.crearMedicamento(
+      nombre: _nombre,
+      dosis: _dosis,
+      hora: horaTexto,          // "HH:mm"
+      fecha: _fecha,            // null = diario, fecha = único
+      intervalo: _intervalo,
+      instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
+    );
+
+    _guardando = false;
+    notifyListeners();
+
+    return exito;
   }
 }
