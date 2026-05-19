@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/widgets/photo_box.dart';
 import '../../viewmodels/add_medication_viewmodel.dart';
 import '../home/home_screen.dart';
 
@@ -37,8 +38,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                   style: TextStyle(fontSize: 20)),
               onTap: () async {
                 Navigator.pop(context);
-                final foto =
-                await vm.tomarFoto(ImageSource.camera);
+                final foto = await vm.tomarFoto(ImageSource.camera);
                 if (foto != null) {
                   _confirmarFoto(context, vm, foto, esCaja);
                 }
@@ -51,8 +51,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                   style: TextStyle(fontSize: 20)),
               onTap: () async {
                 Navigator.pop(context);
-                final foto =
-                await vm.tomarFoto(ImageSource.gallery);
+                final foto = await vm.tomarFoto(ImageSource.gallery);
                 if (foto != null) {
                   if (esCaja) {
                     vm.setFotoCaja(foto);
@@ -75,15 +74,12 @@ class AddMedicationStep4Screen extends StatelessWidget {
       context: context,
       builder: (_) => Stack(
         children: [
-          // Foto de fondo
           Positioned.fill(
             child: Image.file(
               File(foto.path),
               fit: BoxFit.cover,
             ),
           ),
-
-          // Botones en la parte central inferior
           Positioned(
             bottom: 60,
             left: 0,
@@ -91,7 +87,6 @@ class AddMedicationStep4Screen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ✗ Desechar
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
@@ -105,10 +100,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                         color: Colors.white, size: 36),
                   ),
                 ),
-
                 const SizedBox(width: 40),
-
-                // ✓ Guardar
                 GestureDetector(
                   onTap: () {
                     if (esCaja) {
@@ -247,8 +239,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                           hintStyle: TextStyle(
                               fontSize: 20,
                               color: Color(0xFF000080),
-                              fontWeight: FontWeight.bold
-                          ),
+                              fontWeight: FontWeight.bold),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.all(16),
                         ),
@@ -272,24 +263,18 @@ class AddMedicationStep4Screen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Foto caja
-                        _buildCuadroFoto(
-                          context: context,
+                        FotoCuadroWidget(
                           foto: vm.fotoCaja,
                           label: 'CAJA',
-                          onTap: () =>
-                              _mostrarOpcionesFoto(context, vm, true),
+                          onTap: () => _mostrarOpcionesFoto(context, vm, true),
                         ),
 
                         const SizedBox(width: 20),
 
-                        // Foto remedio
-                        _buildCuadroFoto(
-                          context: context,
+                        FotoCuadroWidget(
                           foto: vm.fotoRemedio,
                           label: 'REMEDIO',
-                          onTap: () =>
-                              _mostrarOpcionesFoto(context, vm, false),
+                          onTap: () => _mostrarOpcionesFoto(context, vm, false),
                         ),
                       ],
                     ),
@@ -348,53 +333,6 @@ class AddMedicationStep4Screen extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget cuadro de foto
-  Widget _buildCuadroFoto({
-    required BuildContext context,
-    required XFile? foto,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E0E0),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.black45, width: 3.5),
-            ),
-            child: foto != null
-                ? ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                File(foto.path),
-                fit: BoxFit.cover,
-              ),
-            )
-                : const Icon(
-              Icons.camera_alt,
-              color: Colors.black45,
-              size: 48,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
             ),
           ),
         ],
