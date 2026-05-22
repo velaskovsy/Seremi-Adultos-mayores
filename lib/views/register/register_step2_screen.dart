@@ -204,8 +204,10 @@ class RegisterStep2Screen extends StatelessWidget {
                             ),
                           ),
                           onPressed: () async {
-                            await vm.registrar();
-                            _mostrarPopupExito(context);
+                            final exito = await vm.registrar();
+                            if (exito) {
+                              _mostrarPopupExito(context);
+                            }
                           },
                           child: const Text(
                             'Omitir',
@@ -247,12 +249,12 @@ class RegisterStep2Screen extends StatelessWidget {
                               side: const BorderSide(color: Color(0xFFFF8800), width: 4),
                             ),
                           ),
-                          onPressed: vm.isLoading
-                              ? null
-                              : () async {
+                          onPressed: vm.isLoading ? null : () async {
                             if (vm.validarPaso2()) {
-                              await vm.registrar();
-                              _mostrarPopupExito(context);
+                              final exito = await vm.registrar(conCuidador: true);
+                              if (exito) {
+                                _mostrarPopupExito(context);
+                              }
                             }
                           },
                           child: vm.isLoading

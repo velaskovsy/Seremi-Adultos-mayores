@@ -122,8 +122,8 @@ class LoginScreen extends StatelessWidget {
                   ),
                   // Si está cargando, deshabilita el botón
                   onPressed: vm.isLoading ? null : () async {
-                    await vm.login();
-                    if (vm.errorRut == null && vm.errorPin == null) {
+                    final exito = await vm.login();
+                    if (exito) {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (_) => const HomeScreen()),
