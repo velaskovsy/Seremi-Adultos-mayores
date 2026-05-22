@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/app_footer.dart';
+import '../login/login_screen.dart';
 import '../reminder/add_reminder_screen.dart';
+import '../../services/auth_service.dart'; // Importa tu AuthService
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -21,226 +24,261 @@ class HomeScreen extends StatelessWidget {
     return '$dia, ${ahora.day} de $mes';
   }
 
+  // Método para manejar la salida segura del sistema
+  Future<void> _handleLogout(BuildContext context) async {
+    final authService = AuthService();
+
+
+    await authService.logout();
+
+    // 2. Redirigimos al Login eliminando todas las pantallas previas del historial
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(), // 👈 Aquí colocas el nombre de tu clase de Login
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-        body: Column(
-          children: [
+      body: Column(
+        children: [
 
-            // HEADER
-            Container(
-              width: double.infinity,
-              height: 135,
-              color: const Color(0xFF000080),
-              alignment: Alignment.center,
-              child: const Text(
-                'Salud\nMayor',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontSize: 24,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          // ── HEADER MODIFICADO CON STACK ────────────────────────
+          Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                height: 135,
+                color: const Color(0xFF000080),
+                alignment: Alignment.center,
+                child: const Text(
+                  'Salud\nMayor',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Roboto',
+                    fontSize: 24,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
 
-            // ── CONTENIDO SCROLLEABLE ────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              // Botón de cerrar sesión posicionado arriba a la izquierda
+              Positioned(
+                top: 40, // Espaciado para que no choque con la barra de estado del celular
+                left: 10,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.exit_to_app, // Icono de puerta con flecha hacia afuera
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                  tooltip: 'Cerrar sesión',
+                  onPressed: () => _handleLogout(context),
+                ),
+              ),
+            ],
+          ),
 
-                    const SizedBox(height: 20),
+          // ── CONTENIDO SCROLLEABLE ────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
-                    // ── FECHA ────────────────────────────────
-                    Center(
-                      child: Text(
-                        _obtenerFecha(),
-                        style: const TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
+                  const SizedBox(height: 20),
+
+                  // ── FECHA ────────────────────────────────
+                  Center(
+                    child: Text(
+                      _obtenerFecha(),
+                      style: const TextStyle(
+                        fontFamily: 'Roboto',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                    // ── PRÓXIMA TAREA ─────────────────────────
-                    // TODO: reemplazar con dato real del backend
-                    Center(
-                      child: Container(
-                        width: 344,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD0EFFF),
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: Colors.blueAccent, width: 1.5),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Su próxima tarea es a las\n--:--',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 20,
-                              color: Colors.black87,
-                            ),
+                  // ── PRÓXIMA TAREA ─────────────────────────
+                  Center(
+                    child: Container(
+                      width: 344,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD0EFFF),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: Colors.blueAccent, width: 1.5),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'Su próxima tarea es a las\n--:--',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Roboto',
+                            fontSize: 20,
+                            color: Colors.black87,
                           ),
                         ),
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                    // BOTÓN AÑADIR RECORDATORIO
-                    Center(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              offset: const Offset(4, 6),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: SizedBox(
-                          width: 378,
-                          height: 92,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4CAF50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const AddReminderScreen()),
-                              );
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.add,
-                                    color: Color(0xFF4CAF50),
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'AÑADIR RECORDATORIO',
-                                  style: TextStyle(
-                                    fontFamily: 'Roboto',
-                                    fontSize: 24,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // HORARIO DEL DÍA
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 17),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.access_time,
-                              color: Color(0xFF000080), size: 38),
-                          SizedBox(width: 10),
-                          Text(
-                            'HORARIO DEL DÍA',
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
+                  // BOTÓN AÑADIR RECORDATORIO
+                  Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            offset: const Offset(4, 6),
+                            blurRadius: 8,
                           ),
                         ],
                       ),
+                      child: SizedBox(
+                        width: 378,
+                        height: 92,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CAF50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AddReminderScreen()),
+                            );
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  color: Color(0xFF4CAF50),
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'AÑADIR RECORDATORIO',
+                                style: TextStyle(
+                                  fontFamily: 'Roboto',
+                                  fontSize: 24,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
+                  ),
 
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 17),
-                      child: Divider(color: Colors.black, thickness: 1),
+                  const SizedBox(height: 24),
+
+                  // HORARIO DEL DÍA
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 17),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.access_time,
+                            color: Color(0xFF000080), size: 38),
+                        SizedBox(width: 10),
+                        Text(
+                          'HORARIO DEL DÍA',
+                          style: TextStyle(
+                            fontFamily: 'Roboto',
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    const SizedBox(height: 12),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 17),
+                    child: Divider(color: Colors.black, thickness: 1),
+                  ),
 
-                    // FRANJA MAÑANA
-                    _buildFranja(
-                      color: const Color(0xFFFFE0B2),
-                      icono: Icons.wb_twilight,
-                      iconoColor: Colors.orange,
-                      titulo: 'MAÑANA',
-                      tituloColor: Colors.orange,
-                      // TODO: reemplazar con lista real del backend
-                      vacio: true,
-                      imagenVacio: 'assets/imagenes/mañana.jpg',
-                      mensajeVacio: 'No hay eventos\nprogramados',
-                    ),
+                  const SizedBox(height: 12),
 
-                    const SizedBox(height: 12),
+                  // FRANJA MAÑANA
+                  _buildFranja(
+                    color: const Color(0xFFFFE0B2),
+                    icono: Icons.wb_twilight,
+                    iconoColor: Colors.orange,
+                    titulo: 'MAÑANA',
+                    tituloColor: Colors.orange,
+                    vacio: true,
+                    imagenVacio: 'assets/imagenes/mañana.jpg',
+                    mensajeVacio: 'No hay eventos\nprogramados',
+                  ),
 
-                    // FRANJA TARDE
-                    _buildFranja(
-                      color: const Color(0xFFE3F2FD),
-                      icono: Icons.wb_sunny,
-                      iconoColor: Colors.blue,
-                      titulo: 'TARDE',
-                      tituloColor: Colors.blue,
-                      vacio: true,
-                      imagenVacio: 'assets/imagenes/dia.jpg',
-                      mensajeVacio: 'No hay eventos\nprogramados',
-                    ),
+                  const SizedBox(height: 12),
 
-                    const SizedBox(height: 12),
+                  // FRANJA TARDE
+                  _buildFranja(
+                    color: const Color(0xFFE3F2FD),
+                    icono: Icons.wb_sunny,
+                    iconoColor: Colors.blue,
+                    titulo: 'TARDE',
+                    tituloColor: Colors.blue,
+                    vacio: true,
+                    imagenVacio: 'assets/imagenes/dia.jpg',
+                    mensajeVacio: 'No hay eventos\nprogramados',
+                  ),
 
-                    // FRANJA NOCHE
-                    _buildFranja(
-                      color: const Color(0xFFE8EAF6),
-                      icono: Icons.nightlight_round,
-                      iconoColor: Colors.indigo,
-                      titulo: 'NOCHE',
-                      tituloColor: Colors.indigo,
-                      vacio: true,
-                      imagenVacio: 'assets/imagenes/noche.jpg',
-                      mensajeVacio: 'No hay eventos\nprogramados',
-                    ),
+                  const SizedBox(height: 12),
 
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  // FRANJA NOCHE
+                  _buildFranja(
+                    color: const Color(0xFFE8EAF6),
+                    icono: Icons.nightlight_round,
+                    iconoColor: Colors.indigo,
+                    titulo: 'NOCHE',
+                    tituloColor: Colors.indigo,
+                    vacio: true,
+                    imagenVacio: 'assets/imagenes/noche.jpg',
+                    mensajeVacio: 'No hay eventos\nprogramados',
+                  ),
+
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
+          ),
 
-            // FOOTER
-            const AppFooter(),
-          ],
-        ),
+          // FOOTER
+          const AppFooter(),
+        ],
+      ),
     );
   }
 
@@ -257,54 +295,50 @@ class HomeScreen extends StatelessWidget {
     List<Widget> tarjetas = const [],
   }) {
     return Column(
-    children: [
-      // Barra de color con título
-      Container(
-        width: double.infinity,
-        color: color,
-        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
-        child: Row(
-          children: [
-            Icon(icono, color: iconoColor, size: 36),
-            const SizedBox(width: 10),
-            Text(
-              titulo,
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: tituloColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // Imagen y mensaje fuera del color
-      if (vacio)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
+      children: [
+        Container(
+          width: double.infinity,
+          color: color,
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
+          child: Row(
             children: [
-              Image.asset(imagenVacio, width: 120, height: 120,
-                  fit: BoxFit.contain),
-              const SizedBox(height: 8),
+              Icon(icono, color: iconoColor, size: 36),
+              const SizedBox(width: 10),
               Text(
-                mensajeVacio,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
+                titulo,
+                style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 24,
-                  color: Colors.black54,
+                  fontWeight: FontWeight.bold,
+                  color: tituloColor,
                 ),
               ),
             ],
           ),
-        )
-      else
-      // TODO: aquí irán las tarjetas de actividades del backend
-        Column(children: tarjetas),
-    ],
+        ),
+        if (vacio)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              children: [
+                Image.asset(imagenVacio, width: 120, height: 120,
+                    fit: BoxFit.contain),
+                const SizedBox(height: 8),
+                Text(
+                  mensajeVacio,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Roboto',
+                    fontSize: 24,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Column(children: tarjetas),
+      ],
     );
   }
 }
