@@ -19,6 +19,8 @@ class AuthService {
   static const String _tokenKey = 'auth_token';
   static const String _usuarioKey = 'usuario';
 
+
+
   // ─── LOGIN ───────────────────────────────────────────────────────────────
   Future<AuthResult> login(String rut, String pin) async {
     try {
