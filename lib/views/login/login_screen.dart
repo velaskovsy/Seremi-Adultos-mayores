@@ -19,12 +19,12 @@ class LoginScreen extends StatelessWidget {
 
             // HEADER
             Container(
-              width: 450,
+              width: double.infinity,
               height: 135,
               color: const Color(0xFF000080),
               alignment: Alignment.center,
               child: const Text(
-                'Nombre\nde la app',
+                'Salud\nMayor',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Roboto',
