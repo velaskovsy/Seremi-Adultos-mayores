@@ -1,41 +1,57 @@
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import '../models/recordatorio.dart';
+class RecordatorioModel {
+  final int? id; // SQLite lo genera automáticamente
+  final String nombre;
+  final String dosis;
+  final String hora;
+  final String? fecha; // Guardado como "YYYY-MM-DD" o null si es diario
+  final String intervalo;
+  final String? instrucciones;
+  final String? pathFotoCaja;
+  final String? pathFotoRemedio;
+  final int activo; // 1 para activo, 0 para inactivo
 
-class DBHelper {
-  static Database? _database;
+  RecordatorioModel({
+    this.id,
+    required this.nombre,
+    required this.dosis,
+    required this.hora,
+    this.fecha,
+    required this.intervalo,
+    this.instrucciones,
+    this.pathFotoCaja,
+    this.pathFotoRemedio,
+    this.activo = 1,
+  });
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB();
-    return _database!;
+  // Convertir a Map para insertar en SQLite
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'dosis': dosis,
+      'hora': hora,
+      'fecha': fecha,
+      'intervalo': intervalo,
+      'instrucciones': instrucciones,
+      'pathFotoCaja': pathFotoCaja,
+      'pathFotoRemedio': pathFotoRemedio,
+      'activo': activo,
+    };
   }
 
-  Future<Database> _initDB() async {
-    String path = join(await getDatabasesPath(), 'recordatorios.db');
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE recordatorios (
-            id INTEGER PRIMARY KEY,
-            titulo TEXT,
-            fechaHora TEXT
-          )
-        ''');
-      },
+  // Crear objeto a partir de un Map de la base de datos
+  factory RecordatorioModel.fromMap(Map<String, dynamic> map) {
+    return RecordatorioModel(
+      id: map['id'] as int?,
+      nombre: map['nombre'] as String,
+      dosis: map['dosis'] as String,
+      hora: map['hora'] as String,
+      fecha: map['fecha'] as String?,
+      intervalo: map['intervalo'] as String,
+      instrucciones: map['instrucciones'] as String?,
+      pathFotoCaja: map['pathFotoCaja'] as String?,
+      pathFotoRemedio: map['pathFotoRemedio'] as String?,
+      activo: map['activo'] as int,
     );
-  }
-
-  Future<void> insertarRecordatorio(Recordatorio rec) async {
-    final db = await database;
-    await db.insert('recordatorios', rec.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  Future<List<Recordatorio>> obtenerRecordatorios() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('recordatorios');
-    return List.generate(maps.length, (i) => Recordatorio.fromMap(maps[i]));
   }
 }
