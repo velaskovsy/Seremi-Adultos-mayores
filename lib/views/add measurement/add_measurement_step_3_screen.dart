@@ -2,16 +2,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../core/widgets/photo_box.dart';
-import '../../viewmodels/add_medication_viewmodel.dart';
+import '../../viewmodels/add_measurement_viewmodel.dart';
 import '../home/home_screen.dart';
 
-class AddMedicationStep4Screen extends StatelessWidget {
-  const AddMedicationStep4Screen({Key? key}) : super(key: key);
+class AddMeasurementStep3Screen extends StatelessWidget {
+  const AddMeasurementStep3Screen({Key? key}) : super(key: key);
 
-  // Popup para elegir cámara o galería
+  // ── Popup para elegir cámara o galería ───────────────────
   void _mostrarOpcionesFoto(
-      BuildContext context, AddMedicationViewModel vm, bool esCaja) {
+      BuildContext context, AddMeasurementViewModel vm) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -40,7 +39,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                 Navigator.pop(context);
                 final foto = await vm.tomarFoto(ImageSource.camera);
                 if (foto != null) {
-                  _confirmarFoto(context, vm, foto, esCaja);
+                  _confirmarFoto(context, vm, foto);
                 }
               },
             ),
@@ -53,11 +52,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                 Navigator.pop(context);
                 final foto = await vm.tomarFoto(ImageSource.gallery);
                 if (foto != null) {
-                  if (esCaja) {
-                    vm.setFotoCaja(foto);
-                  } else {
-                    vm.setFotoRemedio(foto);
-                  }
+                  vm.setFotoInstrumento(foto);
                 }
               },
             ),
@@ -67,9 +62,9 @@ class AddMedicationStep4Screen extends StatelessWidget {
     );
   }
 
-  // Confirmación de foto tomada con cámara
-  void _confirmarFoto(BuildContext context, AddMedicationViewModel vm,
-      XFile foto, bool esCaja) {
+  // ── Confirmación de foto tomada con cámara ───────────────
+  void _confirmarFoto(BuildContext context, AddMeasurementViewModel vm,
+      XFile foto) {
     showDialog(
       context: context,
       builder: (_) => Stack(
@@ -87,6 +82,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // ✗ Desechar
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
@@ -101,13 +97,10 @@ class AddMedicationStep4Screen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 40),
+                // ✓ Guardar
                 GestureDetector(
                   onTap: () {
-                    if (esCaja) {
-                      vm.setFotoCaja(foto);
-                    } else {
-                      vm.setFotoRemedio(foto);
-                    }
+                    vm.setFotoInstrumento(foto);
                     Navigator.pop(context);
                   },
                   child: Container(
@@ -131,14 +124,14 @@ class AddMedicationStep4Screen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = Provider.of<AddMedicationViewModel>(context);
+    final vm = Provider.of<AddMeasurementViewModel>(context);
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
 
-          // HEADER
+          // ── HEADER ────────────────────────────────────────
           Container(
             width: double.infinity,
             height: 135,
@@ -166,11 +159,11 @@ class AddMedicationStep4Screen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Añadir\nMedicamento',
+                      vm.tipoMedicion, // ← dinámico
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'Roboto',
                         fontSize: 24,
                         color: Colors.white,
@@ -184,24 +177,24 @@ class AddMedicationStep4Screen extends StatelessWidget {
             ),
           ),
 
-          // CONTENIDO
+          // ── CONTENIDO ─────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 34, vertical: 30),
+                    horizontal: 24, vertical: 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // Título
-                    Center(
+                    // Título centrado
+                    const Center(
                       child: Text(
                         'Añade instrucciones y\nreferencias visuales',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Roboto',
-                          fontSize: 26,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
@@ -210,12 +203,12 @@ class AddMedicationStep4Screen extends StatelessWidget {
 
                     const SizedBox(height: 30),
 
-                    // INSTRUCCIONES
+                    // ── INSTRUCCIONES ─────────────────────────
                     const Text(
                       'INSTRUCCIONES',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -227,19 +220,23 @@ class AddMedicationStep4Screen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFE0E0E0),
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.black, width: 4),
+                        border: Border.all(color: Colors.black, width: 2),
                       ),
                       child: TextField(
                         maxLines: 4,
                         onChanged: vm.setInstrucciones,
-                        style: const TextStyle(fontSize: 20),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF000080),
+                          fontWeight: FontWeight.bold,
+                        ),
                         decoration: const InputDecoration(
-                          hintText:
-                          'Ej: no masticar la pastilla y tomar\ncon abundante líquido',
+                          hintText: 'Ej: Reposar 5 minutos antes\nde tomar la medición',
                           hintStyle: TextStyle(
-                              fontSize: 20,
-                              color: Color(0xFF000080),
-                              fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            color: Color(0xFF000080),
+                            fontWeight: FontWeight.bold,
+                          ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.all(16),
                         ),
@@ -248,40 +245,30 @@ class AddMedicationStep4Screen extends StatelessWidget {
 
                     const SizedBox(height: 30),
 
-                    // FOTOS
+                    // ── FOTO ──────────────────────────────────
                     const Text(
-                      'FOTOS',
+                      'FOTO (Opcional)',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
 
                     const SizedBox(height: 12),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        FotoCuadroWidget(
-                          foto: vm.fotoCaja,
-                          label: 'CAJA',
-                          onTap: () => _mostrarOpcionesFoto(context, vm, true),
-                        ),
-
-                        const SizedBox(width: 20),
-
-                        FotoCuadroWidget(
-                          foto: vm.fotoRemedio,
-                          label: 'REMEDIO',
-                          onTap: () => _mostrarOpcionesFoto(context, vm, false),
-                        ),
-                      ],
+                    Center(
+                      child: _buildCuadroFoto(
+                        context: context,
+                        foto: vm.fotoInstrumento,
+                        label: 'INSTRUMENTO',
+                        onTap: () => _mostrarOpcionesFoto(context, vm),
+                      ),
                     ),
 
                     const SizedBox(height: 40),
 
-                    // BOTÓN GUARDAR
+                    // ── BOTÓN GUARDAR ─────────────────────────
                     Center(
                       child: Container(
                         decoration: BoxDecoration(
@@ -289,7 +276,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.3),
-                              offset: const Offset(0, 6),
+                              offset: const Offset(4, 6),
                               blurRadius: 8,
                             ),
                           ],
@@ -303,7 +290,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15),
                                 side: const BorderSide(
-                                    color: Color(0xFFFF8800), width: 2),
+                                    color: Colors.black, width: 2),
                               ),
                             ),
                             onPressed: () async {
@@ -333,6 +320,53 @@ class AddMedicationStep4Screen extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Widget cuadro de foto ────────────────────────────────
+  Widget _buildCuadroFoto({
+    required BuildContext context,
+    required XFile? foto,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 160,
+            height: 160,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E0E0),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.black45, width: 3.5),
+            ),
+            child: foto != null
+                ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(foto.path),
+                fit: BoxFit.cover,
+              ),
+            )
+                : const Icon(
+              Icons.camera_alt,
+              color: Colors.black45,
+              size: 48,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],

@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
               color: const Color(0xFF000080),
               alignment: Alignment.center,
               child: const Text(
-                'Nombre\nde la app',
+                'Salud\nMayor',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Roboto',

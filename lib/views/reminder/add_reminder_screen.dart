@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:seremi_adultos_mayores/views/add%20measurement/add_measurement_step_1_screen.dart';
 
+import '../add activity/add_activity_step_1_screen.dart';
 import '../add medication/add_medication_step_1_screen.dart';
 
 class AddReminderScreen extends StatelessWidget {
@@ -88,7 +90,10 @@ class AddReminderScreen extends StatelessWidget {
                       colorIcono: const Color(0xFFE53935),
                       label: 'Medición',
                       onTap: () {
-                        // TODO: navegar a pantalla de medición
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AddMeasurementStep1Screen()),
+                        );
                       },
                     ),
 
@@ -101,7 +106,10 @@ class AddReminderScreen extends StatelessWidget {
                       colorIcono: const Color(0xFFAB47BC),
                       label: 'Actividad',
                       onTap: () {
-                        // TODO: navegar a pantalla de actividad
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AddActivityStep1Screen()),
+                        );
                       },
                     ),
 

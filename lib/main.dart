@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:seremi_adultos_mayores/viewmodels/add_activity_viewmodel.dart';
+import 'package:seremi_adultos_mayores/viewmodels/add_measurement_viewmodel.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/register_viewmodel.dart';
 import 'viewmodels/add_medication_viewmodel.dart';
@@ -11,7 +13,7 @@ void main() {
   runApp(
     MultiProvider(
         providers: [
-        ChangeNotifierProvider(create: (_) => LoginViewModel()), ChangeNotifierProvider(create: (_) => RegisterViewModel()),ChangeNotifierProvider(create: (_) => AddMedicationViewModel()),],
+        ChangeNotifierProvider(create: (_) => LoginViewModel()), ChangeNotifierProvider(create: (_) => RegisterViewModel()),ChangeNotifierProvider(create: (_) => AddMedicationViewModel()),ChangeNotifierProvider(create: (_) => AddMeasurementViewModel()), ChangeNotifierProvider(create: (_) => AddActivityViewModel()),],
       child: const MyApp(),
     ),
   );
