@@ -176,7 +176,7 @@ class AddMedicationViewModel extends ChangeNotifier {
         'nombre': _nombre,
         'dosis': _dosis,
         'hora': horaTexto,
-        'fecha': _fecha,
+        'fecha': horaTexto,
         'intervalo': _intervalo,
         'instrucciones':
         _instrucciones.trim().isNotEmpty
