@@ -1,10 +1,11 @@
+// lib/viewmodels/add_measurement_viewmodel.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/medicion_service.dart';
 
-
 class AddMeasurementViewModel extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
+  final MedicionService _medicionService = MedicionService();
 
   // Paso 1: tipo de medición
   String _tipoMedicion = '';
@@ -27,6 +28,10 @@ class AddMeasurementViewModel extends ChangeNotifier {
   // Paso 4: instrucciones y foto del instrumento
   String _instrucciones = '';
   XFile? _fotoInstrumento;
+
+  // Estado de carga
+  bool _guardando = false;
+  String? _errorGuardar;
 
   // Getters paso 1
   String get tipoMedicion => _tipoMedicion;
@@ -61,7 +66,7 @@ class AddMeasurementViewModel extends ChangeNotifier {
     final hoy = DateTime.now();
     final manana = DateTime(hoy.year, hoy.month, hoy.day + 1);
     final seleccionada =
-    DateTime(_fechaPrimera!.year, _fechaPrimera!.month, _fechaPrimera!.day);
+        DateTime(_fechaPrimera!.year, _fechaPrimera!.month, _fechaPrimera!.day);
     if (seleccionada == DateTime(hoy.year, hoy.month, hoy.day)) return 'HOY';
     if (seleccionada == manana) return 'MAÑANA';
     return '${_fechaPrimera!.day}/${_fechaPrimera!.month}/${_fechaPrimera!.year}';
@@ -76,6 +81,8 @@ class AddMeasurementViewModel extends ChangeNotifier {
   // Getters paso 4
   String get instrucciones => _instrucciones;
   XFile? get fotoInstrumento => _fotoInstrumento;
+  bool get guardando => _guardando;
+  String? get errorGuardar => _errorGuardar;
 
   // Setters paso 1
   void setTipoMedicion(String value) {
@@ -147,25 +154,32 @@ class AddMeasurementViewModel extends ChangeNotifier {
     return valido;
   }
 
-  // Guardar
-  Future<void> guardar() async {
-    final MedicionService _medicionService = MedicionService();
+  // ─── Guardar: conectado a Railway ─────────────────────────
+  Future<bool> guardar() async {
+    _guardando = true;
+    _errorGuardar = null;
+    notifyListeners();
 
-    Future<void> guardar() async {
-      // Convierte las horas a formato "HH:mm"
-      final horasFormateadas = _horas.map((h) {
-        final hora = h.hour.toString().padLeft(2, '0');
-        final min = h.minute.toString().padLeft(2, '0');
-        return '$hora:$min';
-      }).toList();
+    // Convierte las horas a formato "HH:mm"
+    final horasFormateadas = _horas.map((h) {
+      final hora = h.hour.toString().padLeft(2, '0');
+      final min = h.minute.toString().padLeft(2, '0');
+      return '$hora:$min';
+    }).toList();
 
-      await _medicionService.crearMedicion(
-        tipoMedicion: _tipoMedicion,
-        horas: horasFormateadas,
-        fecha: _fecha,
-        instrucciones: _instrucciones.isNotEmpty ? _instrucciones : null,
-      );
+    final exito = await _medicionService.crearMedicion(
+      tipoMedicion: _tipoMedicion,
+      horas: horasFormateadas,
+      fecha: _fecha,
+      instrucciones: _instrucciones.isNotEmpty ? _instrucciones : null,
+    );
+
+    _guardando = false;
+    if (!exito) {
+      _errorGuardar = 'No se pudo guardar. Verifica tu conexión e intenta de nuevo.';
     }
-    await Future.delayed(const Duration(seconds: 1));
+    notifyListeners();
+
+    return exito;
   }
 }

@@ -161,7 +161,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      vm.tipoMedicion, // ← dinámico
+                      vm.tipoMedicion,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontFamily: 'Roboto',
@@ -268,6 +268,24 @@ class AddMeasurementStep3Screen extends StatelessWidget {
 
                     const SizedBox(height: 40),
 
+                    // ── MENSAJE DE ERROR ──────────────────────
+                    if (vm.errorGuardar != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Center(
+                          child: Text(
+                            vm.errorGuardar!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'Roboto',
+                              fontSize: 16,
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
                     // ── BOTÓN GUARDAR ─────────────────────────
                     Center(
                       child: Container(
@@ -286,31 +304,40 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                           height: 65,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF8800),
+                              backgroundColor: vm.guardando
+                                  ? Colors.grey
+                                  : const Color(0xFFFF8800),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15),
                                 side: const BorderSide(
                                     color: Colors.black, width: 2),
                               ),
                             ),
-                            onPressed: () async {
-                              await vm.guardar();
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const HomeScreen()),
-                                    (route) => false,
-                              );
-                            },
-                            child: const Text(
-                              'Guardar',
-                              style: TextStyle(
-                                fontFamily: 'Roboto',
-                                fontSize: 32,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            onPressed: vm.guardando
+                                ? null
+                                : () async {
+                                    final exito = await vm.guardar();
+                                    if (exito && context.mounted) {
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => const HomeScreen()),
+                                        (route) => false,
+                                      );
+                                    }
+                                  },
+                            child: vm.guardando
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white)
+                                : const Text(
+                                    'Guardar',
+                                    style: TextStyle(
+                                      fontFamily: 'Roboto',
+                                      fontSize: 32,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
