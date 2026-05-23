@@ -18,6 +18,22 @@ class AlarmaService {
     return await db.query('alarma');
   }
 
+  // GET ONE
+  Future<Map<String, dynamic>?> getAlarma(int id) async {
+    final db = await DatabaseHelper.instance.database;
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'alarma',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      return maps.first;
+    }
+    return null;
+  }
+
   // DELETE
   Future<int> deleteAlarma(int id) async {
     final db = await DatabaseHelper.instance.database;
