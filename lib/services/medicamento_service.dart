@@ -9,15 +9,6 @@ class MedicamentoService {
 
   final AuthService _authService = AuthService();
 
-  /// Crea un recordatorio de medicamento en Railway.
-  /// Usa POST /api/recordatorios/medicamento
-  ///
-  /// [nombre]        : nombre del medicamento (requerido)
-  /// [dosis]         : ej. "500mg" o "1 pastilla" (requerido)
-  /// [hora]          : hora de primera toma en formato "HH:mm" (requerido)
-  /// [fecha]         : null = recurrente diario, fecha = solo ese día
-  /// [intervalo]     : texto del intervalo seleccionado, ej. "Cada 12 horas"
-  /// [instrucciones] : texto libre opcional
   Future<bool> crearMedicamento({
     required String nombre,
     required String dosis,
@@ -25,6 +16,8 @@ class MedicamentoService {
     DateTime? fecha,
     String? intervalo,
     String? instrucciones,
+    String? urlFotoCaja,
+    String? urlFotoRemedio,
   }) async {
     final token = await _authService.getToken();
     if (token == null) return false;
@@ -33,22 +26,24 @@ class MedicamentoService {
       final body = <String, dynamic>{
         'nombre': nombre,
         'dosis': dosis,
-        'hora_primera': hora, // formato "HH:mm"
+        'hora_primera': hora,
       };
 
-      // Si se eligió una fecha específica la mandamos (frecuencia = 'unica')
-      // Si no, el servidor la trata como diaria
       if (fecha != null) {
         body['fecha_inicio'] =
             '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
       }
-
       if (intervalo != null && intervalo.trim().isNotEmpty) {
         body['intervalo'] = intervalo;
       }
-
       if (instrucciones != null && instrucciones.trim().isNotEmpty) {
         body['instrucciones'] = instrucciones;
+      }
+      if (urlFotoCaja != null) {
+        body['url_foto_caja'] = urlFotoCaja;
+      }
+      if (urlFotoRemedio != null) {
+        body['url_foto_remedio'] = urlFotoRemedio;
       }
 
       final response = await http.post(

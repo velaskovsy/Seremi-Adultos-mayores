@@ -2,16 +2,17 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/medicion_service.dart';
+import '../services/storage_service.dart';
 
 class AddMeasurementViewModel extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
   final MedicionService _medicionService = MedicionService();
+  final StorageService _storageService = StorageService();
 
   // Paso 1: tipo de medición
   String _tipoMedicion = '';
   String? _errorTipoMedicion;
 
-  // Lista de mediciones disponibles
   final List<String> tiposMedicion = [
     'Presión arterial',
     'Next',
@@ -154,13 +155,19 @@ class AddMeasurementViewModel extends ChangeNotifier {
     return valido;
   }
 
-  // ─── Guardar: conectado a Railway ─────────────────────────
+  // ─── Guardar: sube foto a Supabase y guarda en Railway ────
+
   Future<bool> guardar() async {
     _guardando = true;
     _errorGuardar = null;
     notifyListeners();
 
-    // Convierte las horas a formato "HH:mm"
+    // Subir foto a Supabase (opcional)
+    String? urlFoto;
+    if (_fotoInstrumento != null) {
+      urlFoto = await _storageService.subirFoto(_fotoInstrumento!, 'mediciones');
+    }
+
     final horasFormateadas = _horas.map((h) {
       final hora = h.hour.toString().padLeft(2, '0');
       final min = h.minute.toString().padLeft(2, '0');
@@ -172,6 +179,7 @@ class AddMeasurementViewModel extends ChangeNotifier {
       horas: horasFormateadas,
       fecha: _fecha,
       instrucciones: _instrucciones.isNotEmpty ? _instrucciones : null,
+      urlFoto: urlFoto,
     );
 
     _guardando = false;
