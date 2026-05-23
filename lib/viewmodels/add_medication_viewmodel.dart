@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/medicamento_service.dart';
+import '../services/alarma_service.dart';
 
 class AddMedicationViewModel extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
   final MedicamentoService _medicamentoService = MedicamentoService();
+  final AlarmaService _recordatorioService = AlarmaService();
 
   // Paso 1: nombre y dosis
   String _nombre = '';
@@ -159,11 +161,31 @@ class AddMedicationViewModel extends ChangeNotifier {
     final exito = await _medicamentoService.crearMedicamento(
       nombre: _nombre,
       dosis: _dosis,
-      hora: horaTexto,          // "HH:mm"
-      fecha: _fecha,            // null = diario, fecha = único
+      hora: horaTexto,
+      fecha: _fecha,
       intervalo: _intervalo,
-      instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
+      instrucciones:
+      _instrucciones.trim().isNotEmpty
+          ? _instrucciones
+          : null,
     );
+
+    // GUARDAR TAMBIÉN la alarma
+    if (exito) {
+      await _recordatorioService.insertAlarma({
+        'nombre': _nombre,
+        'dosis': _dosis,
+        'hora': horaTexto,
+        'fecha': _fecha,
+        'intervalo': _intervalo,
+        'instrucciones':
+        _instrucciones.trim().isNotEmpty
+            ? _instrucciones
+            : null,
+        'activo': 1,
+        'tipo': 0,
+      });
+    }
 
     _guardando = false;
     notifyListeners();

@@ -1,57 +1,56 @@
-class RecordatorioModel {
-  final int? id; // SQLite lo genera automáticamente
-  final String nombre;
-  final String dosis;
-  final String hora;
-  final String? fecha; // Guardado como "YYYY-MM-DD" o null si es diario
-  final String intervalo;
-  final String? instrucciones;
-  final String? pathFotoCaja;
-  final String? pathFotoRemedio;
-  final int activo; // 1 para activo, 0 para inactivo
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
-  RecordatorioModel({
-    this.id,
-    required this.nombre,
-    required this.dosis,
-    required this.hora,
-    this.fecha,
-    required this.intervalo,
-    this.instrucciones,
-    this.pathFotoCaja,
-    this.pathFotoRemedio,
-    this.activo = 1,
-  });
+class DatabaseHelper {
+  static final DatabaseHelper instance = DatabaseHelper._init();
 
-  // Convertir a Map para insertar en SQLite
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'nombre': nombre,
-      'dosis': dosis,
-      'hora': hora,
-      'fecha': fecha,
-      'intervalo': intervalo,
-      'instrucciones': instrucciones,
-      'pathFotoCaja': pathFotoCaja,
-      'pathFotoRemedio': pathFotoRemedio,
-      'activo': activo,
-    };
+  static Database? _database;
+
+  DatabaseHelper._init();
+
+  // Obtener DB
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+
+    _database = await _initDB('app.db');
+    return _database!;
   }
 
-  // Crear objeto a partir de un Map de la base de datos
-  factory RecordatorioModel.fromMap(Map<String, dynamic> map) {
-    return RecordatorioModel(
-      id: map['id'] as int?,
-      nombre: map['nombre'] as String,
-      dosis: map['dosis'] as String,
-      hora: map['hora'] as String,
-      fecha: map['fecha'] as String?,
-      intervalo: map['intervalo'] as String,
-      instrucciones: map['instrucciones'] as String?,
-      pathFotoCaja: map['pathFotoCaja'] as String?,
-      pathFotoRemedio: map['pathFotoRemedio'] as String?,
-      activo: map['activo'] as int,
+  // Inicializar DB
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+
+    final path = join(dbPath, filePath);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
     );
+  }
+
+  // Crear tablas
+  Future _createDB(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE alarma (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        dosis TEXT,
+        hora TEXT,
+        fecha TEXT,
+        intervalo TEXT,
+        instrucciones TEXT,
+        pathFotoCaja TEXT,
+        pathFotoRemedio TEXT,
+        activo INTEGER,
+        tipo INTEGER
+      )
+    ''');
+  }
+
+  // Cerrar DB
+  Future close() async {
+    final db = await instance.database;
+    db.close();
   }
 }
