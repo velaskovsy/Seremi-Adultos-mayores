@@ -1,4 +1,6 @@
+// lib/viewmodels/add_activity_viewmodel.dart
 import 'package:flutter/material.dart';
+import '../services/activity_service.dart';
 
 class AddActivityViewModel extends ChangeNotifier {
 
@@ -28,6 +30,9 @@ class AddActivityViewModel extends ChangeNotifier {
     '6 vasos',
   ];
 
+  // Estado de carga
+  bool _guardando = false;
+
   // ── Getters paso 1 ───────────────────────────────────────
   String get tipoActividad => _tipoActividad;
   String? get errorTipoActividad => _errorTipoActividad;
@@ -54,6 +59,7 @@ class AddActivityViewModel extends ChangeNotifier {
 
   // ── Getters paso 3 ───────────────────────────────────────
   Map<int, String> get cantidadPorHora => Map.unmodifiable(_cantidadPorHora);
+  bool get guardando => _guardando;
 
   String cantidadEnIndice(int index) {
     return _cantidadPorHora[index] ?? '1 vaso';
@@ -115,9 +121,33 @@ class AddActivityViewModel extends ChangeNotifier {
     return true;
   }
 
-  // ── Guardar ──────────────────────────────────────────────
-  Future<void> guardar() async {
-    // TODO: conectar con Railway
-    await Future.delayed(const Duration(seconds: 1));
+  // ── Guardar: conectado a Railway ─────────────────────────
+  Future<bool> guardar() async {
+    _guardando = true;
+    notifyListeners();
+
+    // Convierte horas a "HH:mm" y construye mapa hora → cantidad
+    final horasFormateadas = <String>[];
+    final cantidadMapeada = <String, String>{};
+
+    for (int i = 0; i < _horas.length; i++) {
+      final horaStr = horaTexto(_horas[i]);
+      horasFormateadas.add(horaStr);
+      if (_cantidadPorHora.containsKey(i)) {
+        cantidadMapeada[horaStr] = _cantidadPorHora[i]!;
+      }
+    }
+
+    final exito = await ActivityService().crearActividad(
+      tipoActividad: _tipoActividad,
+      horas: horasFormateadas,
+      fecha: _fecha,
+      cantidadPorHora: cantidadMapeada.isNotEmpty ? cantidadMapeada : null,
+    );
+
+    _guardando = false;
+    notifyListeners();
+
+    return exito;
   }
 }

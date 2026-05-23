@@ -37,6 +37,7 @@ class AddMedicationViewModel extends ChangeNotifier {
 
   // Estado de carga
   bool _guardando = false;
+  String? _errorGuardar;
 
   // ─── Getters ──────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ class AddMedicationViewModel extends ChangeNotifier {
   XFile? get fotoRemedio => _fotoRemedio;
 
   bool get guardando => _guardando;
+  String? get errorGuardar => _errorGuardar;
 
   // Texto de fecha para mostrar en pantalla
   String get fechaTexto {
@@ -154,18 +156,22 @@ class AddMedicationViewModel extends ChangeNotifier {
 
   Future<bool> guardar() async {
     _guardando = true;
+    _errorGuardar = null;
     notifyListeners();
 
     final exito = await _medicamentoService.crearMedicamento(
       nombre: _nombre,
       dosis: _dosis,
-      hora: horaTexto,          // "HH:mm"
-      fecha: _fecha,            // null = diario, fecha = único
+      hora: horaTexto,
+      fecha: _fecha,
       intervalo: _intervalo,
       instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
     );
 
     _guardando = false;
+    if (!exito) {
+      _errorGuardar = 'No se pudo guardar. Verifica tu conexión e intenta de nuevo.';
+    }
     notifyListeners();
 
     return exito;
