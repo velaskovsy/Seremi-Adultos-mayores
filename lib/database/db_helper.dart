@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart'; // 1. IMPORTANTE: Para usar kIsWeb
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart'; // 2. IMPORTANTE: Soporte para Web
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -18,15 +20,30 @@ class DatabaseHelper {
 
   // Inicializar DB
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
+    // === CAMBIO AQUÍ ===
+    if (kIsWeb) {
+      // Si es web, inicializamos la fábrica para el navegador
+      databaseFactory = databaseFactoryFfiWeb;
 
-    final path = join(dbPath, filePath);
+      // En Web no existen las rutas de carpetas tradicionales,
+      // pasamos directamente el nombre del archivo.
+      return await openDatabase(
+        filePath,
+        version: 1,
+        onCreate: _createDB,
+      );
+    } else {
+      // Si es Android o iOS, corre tu código original tal cual
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDB,
-    );
+      return await openDatabase(
+        path,
+        version: 1,
+        onCreate: _createDB,
+      );
+    }
+    // ===================
   }
 
   // Crear tablas

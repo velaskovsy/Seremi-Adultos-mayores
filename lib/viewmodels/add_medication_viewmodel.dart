@@ -172,19 +172,26 @@ class AddMedicationViewModel extends ChangeNotifier {
 
     // GUARDAR TAMBIÉN la alarma
     if (exito) {
-      await _recordatorioService.insertAlarma({
+      // Capturamos el ID que devuelve la base de datos
+      int idInsertado = await _recordatorioService.insertAlarma({
         'nombre': _nombre,
         'dosis': _dosis,
         'hora': horaTexto,
         'fecha': horaTexto,
         'intervalo': _intervalo,
-        'instrucciones':
-        _instrucciones.trim().isNotEmpty
-            ? _instrucciones
-            : null,
+        'instrucciones': _instrucciones.trim().isNotEmpty ? _instrucciones : null,
         'activo': 1,
         'tipo': 0,
       });
+
+      // Verificamos si es mayor que 0 (significa que se guardó correctamente)
+      if (idInsertado > 0) {
+        print('¡Alarma guardada con éxito! ID: $idInsertado');
+        // Aquí puedes mostrar un mensaje al usuario (SnackBar, Toast, etc.)
+        // o cerrar la pantalla actual si es necesario.
+      } else {
+        print('Hubo un problema al guardar la alarma.');
+      }
     }
 
     _guardando = false;
