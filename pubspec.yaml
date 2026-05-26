@@ -45,6 +45,9 @@ dependencies:
   shared_preferences: ^2.3.2
   http: ^1.2.1
 
+dependency_overrides:
+  app_links: 6.3.2
+
   flutter_localizations:
     sdk: flutter
 
