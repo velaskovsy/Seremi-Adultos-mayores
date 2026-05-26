@@ -1,48 +1,22 @@
 import 'package:flutter/material.dart';
 import '../services/recordatorio_service.dart';
-import '../services/auth_service.dart';
 
 class HomeViewModel extends ChangeNotifier {
+
   final RecordatorioService _service = RecordatorioService();
-  final AuthService _authService = AuthService();
 
-  RecordatoriosHoy? _data;
-  bool    _isLoading = false;
-  String? _error;
+  Map<String, dynamic>? data;
 
-  RecordatoriosHoy? get data      => _data;
-  bool              get isLoading => _isLoading;
-  String?           get error     => _error;
-
-  String get proximaTarea {
-    if (_data?.proximaTarea == null) return '--:--';
-    return _data!.proximaTarea!;
-  }
-
-  Future<void> cerrarSesion() async {
-    _isLoading = true;
-    notifyListeners();
-
-    await _authService.logout();
-
-    _isLoading = false;
-    notifyListeners();
-  }
+  bool isLoading = false;
 
   Future<void> cargar() async {
-    _isLoading = true;
-    _error     = null;
+
+    isLoading = true;
     notifyListeners();
 
-    final result = await _service.obtenerHoy();
+    data = await _service.obtenerHoy();
 
-    _isLoading = false;
-    if (result != null) {
-      _data  = result;
-      _error = null;
-    } else {
-      _error = 'No se pudieron cargar los recordatorios';
-    }
+    isLoading = false;
     notifyListeners();
   }
 }

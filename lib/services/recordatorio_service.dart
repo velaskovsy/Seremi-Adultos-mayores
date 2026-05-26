@@ -1,89 +1,71 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
-import 'auth_service.dart';
-
-class RecordatorioItem {
-  final int id;
-  final String tipo;
-  final String color;
-  final String nombre;
-  final String? detalle;
-  final String hora;
-
-  const RecordatorioItem({
-    required this.id,
-    required this.tipo,
-    required this.color,
-    required this.nombre,
-    this.detalle,
-    required this.hora,
-  });
-
-  factory RecordatorioItem.fromJson(Map<String, dynamic> json) {
-    return RecordatorioItem(
-      id:      json['id']     as int,
-      tipo:    json['tipo']   as String,
-      color:   json['color']  as String,
-      nombre:  json['nombre'] as String,
-      detalle: json['detalle'] as String?,
-      hora:    json['hora']   as String,
-    );
-  }
-}
-
-class RecordatoriosHoy {
-  final String? proximaTarea;
-  final List<RecordatorioItem> manana;
-  final List<RecordatorioItem> tarde;
-  final List<RecordatorioItem> noche;
-
-  const RecordatoriosHoy({
-    this.proximaTarea,
-    required this.manana,
-    required this.tarde,
-    required this.noche,
-  });
-}
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RecordatorioService {
-  static const String _baseUrl =
-      'https://servidorappseremi-production.up.railway.app';
 
-  final AuthService _authService = AuthService();
+  static const String _url =
+      'https://servidorappseremi-production.up.railway.app/api/recordatorios/hoy';
 
-  Future<RecordatoriosHoy?> obtenerHoy() async {
-    final token = await _authService.getToken();
-    if (token == null) return null;
+  static const String _tokenKey = 'auth_token';
+
+  Future<Map<String, dynamic>?> obtenerHoy() async {
 
     try {
+
+      final prefs = await SharedPreferences.getInstance();
+
+      final token = prefs.getString(_tokenKey);
+
+      if (token == null) {
+        print('No hay token guardado');
+        return null;
+      }
+
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/recordatorios/hoy'),
+
+        Uri.parse(_url),
+
         headers: {
-          'Content-Type':  'application/json',
           'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
         },
       );
 
+      print('STATUS CODE: ${response.statusCode}');
+      print('BODY: ${response.body}');
+
       if (response.statusCode == 200) {
-        final data    = jsonDecode(response.body) as Map<String, dynamic>;
-        final franjas = data['franjas']           as Map<String, dynamic>;
 
-        List<RecordatorioItem> parsear(String franja) {
-          final lista = franjas[franja] as List<dynamic>? ?? [];
-          return lista
-              .map((e) => RecordatorioItem.fromJson(e as Map<String, dynamic>))
-              .toList();
-        }
+        final data = jsonDecode(response.body);
 
-        return RecordatoriosHoy(
-          proximaTarea: data['proxima_tarea'] as String?,
-          manana:       parsear('manana'),
-          tarde:        parsear('tarde'),
-          noche:        parsear('noche'),
-        );
+        return {
+          'proxima_tarea': data['proxima_tarea'],
+
+          'franjas': {
+
+            'manana': List<Map<String, dynamic>>.from(
+              data['franjas']['manana'] ?? [],
+            ),
+
+            'tarde': List<Map<String, dynamic>>.from(
+              data['franjas']['tarde'] ?? [],
+            ),
+
+            'noche': List<Map<String, dynamic>>.from(
+              data['franjas']['noche'] ?? [],
+            ),
+          }
+        };
       }
+
+      print('Error servidor: ${response.statusCode}');
       return null;
-    } catch (_) {
+
+    } catch (e) {
+
+      print('ERROR obtenerHoy: $e');
       return null;
     }
   }
