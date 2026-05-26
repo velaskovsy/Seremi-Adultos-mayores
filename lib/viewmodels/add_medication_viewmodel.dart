@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/medicamento_service.dart';
+import '../services/storage_service.dart';
 
 class AddMedicationViewModel extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
   final MedicamentoService _medicamentoService = MedicamentoService();
+  final StorageService _storageService = StorageService();
 
   // Paso 1: nombre y dosis
   String _nombre = '';
@@ -37,6 +39,7 @@ class AddMedicationViewModel extends ChangeNotifier {
 
   // Estado de carga
   bool _guardando = false;
+  String? _errorGuardar;
 
   // ─── Getters ──────────────────────────────────────────────
 
@@ -55,21 +58,18 @@ class AddMedicationViewModel extends ChangeNotifier {
   XFile? get fotoRemedio => _fotoRemedio;
 
   bool get guardando => _guardando;
+  String? get errorGuardar => _errorGuardar;
 
-  // Texto de fecha para mostrar en pantalla
   String get fechaTexto {
     if (_fecha == null) return 'Seleccionar';
     final hoy = DateTime.now();
     final manana = DateTime(hoy.year, hoy.month, hoy.day + 1);
     final seleccionada = DateTime(_fecha!.year, _fecha!.month, _fecha!.day);
-
     if (seleccionada == DateTime(hoy.year, hoy.month, hoy.day)) return 'HOY';
     if (seleccionada == manana) return 'MAÑANA';
-
     return '${_fecha!.day}/${_fecha!.month}/${_fecha!.year}';
   }
 
-  // Texto de hora para mostrar en pantalla y enviar al servidor
   String get horaTexto {
     final h = _hora.hour.toString().padLeft(2, '0');
     final m = _hora.minute.toString().padLeft(2, '0');
@@ -116,7 +116,6 @@ class AddMedicationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Foto desde galería o cámara
   Future<XFile?> tomarFoto(ImageSource source) async {
     final foto = await _picker.pickImage(source: source);
     return foto;
@@ -136,7 +135,6 @@ class AddMedicationViewModel extends ChangeNotifier {
 
   bool validarPaso1() {
     bool valido = true;
-
     if (_nombre.isEmpty) {
       _errorNombre = 'Ingrese el nombre del medicamento';
       valido = false;
@@ -145,27 +143,43 @@ class AddMedicationViewModel extends ChangeNotifier {
       _errorDosis = 'Ingrese la dosis';
       valido = false;
     }
-
     notifyListeners();
     return valido;
   }
 
-  // ─── Guardar: conectado a Railway ─────────────────────────
+  // ─── Guardar: sube fotos a Supabase y guarda en Railway ───
 
   Future<bool> guardar() async {
     _guardando = true;
+    _errorGuardar = null;
     notifyListeners();
+
+    // Subir fotos a Supabase (opcionales)
+    String? urlFotoCaja;
+    String? urlFotoRemedio;
+
+    if (_fotoCaja != null) {
+      urlFotoCaja = await _storageService.subirFoto(_fotoCaja!, 'medicamentos');
+    }
+    if (_fotoRemedio != null) {
+      urlFotoRemedio = await _storageService.subirFoto(_fotoRemedio!, 'medicamentos');
+    }
 
     final exito = await _medicamentoService.crearMedicamento(
       nombre: _nombre,
       dosis: _dosis,
-      hora: horaTexto,          // "HH:mm"
-      fecha: _fecha,            // null = diario, fecha = único
+      hora: horaTexto,
+      fecha: _fecha,
       intervalo: _intervalo,
       instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
+      urlFotoCaja: urlFotoCaja,
+      urlFotoRemedio: urlFotoRemedio,
     );
 
     _guardando = false;
+    if (!exito) {
+      _errorGuardar = 'No se pudo guardar. Verifica tu conexión e intenta de nuevo.';
+    }
     notifyListeners();
 
     return exito;
