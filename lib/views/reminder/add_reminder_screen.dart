@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:seremi_adultos_mayores/views/add%20measurement/add_measurement_step_1_screen.dart';
 
 import '../add activity/add_activity_step_1_screen.dart';
+import '../add appointment/add_appointment_step_1_screen.dart';
 import '../add medication/add_medication_step_1_screen.dart';
 
 class AddReminderScreen extends StatelessWidget {
@@ -122,7 +123,10 @@ class AddReminderScreen extends StatelessWidget {
                       colorIcono: const Color(0xFF42A5F5),
                       label: 'Cita Médica',
                       onTap: () {
-                        // TODO: navegar a pantalla de cita médica
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AddAppointmentStep1Screen()),
+                        );
                       },
                     ),
 
