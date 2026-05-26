@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:seremi_adultos_mayores/viewmodels/add_appointment_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_activity_viewmodel.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_measurement_viewmodel.dart';
@@ -26,6 +27,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AddMedicationViewModel()),
         ChangeNotifierProvider(create: (_) => AddMeasurementViewModel()),
         ChangeNotifierProvider(create: (_) => AddActivityViewModel()),
+        ChangeNotifierProvider(create: (_) => AddAppointmentViewModel()),
       ],
       child: const MyApp(),
     ),
