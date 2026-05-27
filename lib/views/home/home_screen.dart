@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/widgets/app_footer.dart';
 import '../../services/auth_service.dart';
 import '../../viewmodels/home_viewmodel.dart';
+import '../../viewmodels/alarma_medicacion_viewmodel.dart';
 
 import '../login/login_screen.dart';
 import '../reminder/add_reminder_screen.dart';
@@ -23,12 +25,17 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
 
     vm = HomeViewModel();
-
     vm.addListener(() {
-      setState(() {});
+      if (mounted) setState(() {});
     });
-
     vm.cargar();
+
+    // CORRECCIÓN: Programar las alarmas reales del día al entrar al Home
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AlarmViewModel>().sincronizarAlarmasDelDia();
+      }
+    });
   }
 
   // Fecha dinámica
@@ -67,9 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-
     final authService = AuthService();
-
     await authService.logout();
 
     if (context.mounted) {
@@ -508,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
 
       default:
-        color = Colors.white;
+        color = Colors.grey;
     }
 
     return Container(

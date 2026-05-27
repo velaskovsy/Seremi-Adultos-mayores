@@ -1,44 +1,73 @@
 import 'package:flutter/material.dart';
-// Asegúrate de importar correctamente tus servicios:
+import 'package:alarm/alarm.dart';
 import '../services/recordatorio_service.dart';
-import '../services/notificacion_service.dart';
 
 class AlarmViewModel extends ChangeNotifier {
   final RecordatorioService _recordatorioService = RecordatorioService();
-  final NotificationService _notificationService = NotificationService();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  /// Método principal que descarga los datos y activa las alarmas
+  /// Cancela todas las alarmas anteriores y programa las del día actual
   Future<void> sincronizarAlarmasDelDia() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // 1. Obtenemos la lista que ya filtramos en el servicio
+      // 1. Cancelar todas las alarmas anteriores para no duplicar
+      final alarmasActivas = await Alarm.getAlarms();
+      for (final alarma in alarmasActivas) {
+        await Alarm.stop(alarma.id);
+      }
+
+      // 2. Obtener lista de medicamentos del día desde el servidor
       final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
 
-      // 2. Revisamos los horarios de cada medicamento
+      // 3. Programar una alarma real para cada medicamento
       for (var medicamento in listadoMedicamentos) {
-        final String horaStr = medicamento['hora'] ?? ''; // Ej: "14:30"
+        final String horaStr = medicamento['hora'] ?? '';
         if (horaStr.isEmpty) continue;
 
-        // Convertimos el String "14:30" a un objeto DateTime real de hoy
         final partes = horaStr.split(':');
+        if (partes.length < 2) continue;
+
         final DateTime ahora = DateTime.now();
-        final DateTime horaAlarma = DateTime(
-            ahora.year, ahora.month, ahora.day,
-            int.parse(partes[0]), int.parse(partes[1])
+        DateTime horaAlarma = DateTime(
+          ahora.year,
+          ahora.month,
+          ahora.day,
+          int.parse(partes[0]),
+          int.parse(partes[1]),
         );
 
-        // Si la hora de la pastilla aún no ha pasado, programamos el salto de pantalla
-        if (horaAlarma.isAfter(ahora)) {
-          await _notificationService.dispararNotificacionPantallaCompleta(medicamento);
-        }
+        // Si la hora ya pasó hoy, no programar
+        if (!horaAlarma.isAfter(ahora)) continue;
+
+        // Usamos el id numérico del medicamento; si no existe generamos uno
+        final int alarmaId = (medicamento['id'] is int)
+            ? medicamento['id'] as int
+            : medicamento['id'].toString().hashCode.abs() % 100000;
+
+        final alarmSettings = AlarmSettings(
+          id: alarmaId,
+          dateTime: horaAlarma,
+          assetAudioPath: 'assets/sonidos/alarma.mp3',
+          loopAudio: true,
+          vibrate: true,
+          warningNotificationOnKill: true,
+          androidFullScreenIntent: true,
+          notificationSettings: NotificationSettings(
+            title: '¡Hora de tu medicación!',
+            body: 'Debes tomar: ${medicamento['nombre'] ?? 'Medicamento'}',
+            stopButton: 'Detener alarma',
+            icon: 'notification_icon',
+          ),
+        );
+
+        await Alarm.set(alarmSettings: alarmSettings);
       }
     } catch (e) {
-      print("Error en AlarmViewModel: $e");
+      debugPrint('Error en AlarmViewModel: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
