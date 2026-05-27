@@ -10,6 +10,26 @@ class RecordatorioService {
 
   static const String _tokenKey = 'auth_token';
 
+  Future<List<Map<String, dynamic>>> obtenerSoloMedicamentos() async {
+    final data = await obtenerHoy();
+    if (data == null || data['franjas'] == null) return [];
+
+    final franjas = data['franjas'] as Map<String, dynamic>;
+    List<Map<String, dynamic>> medicamentosFiltrados = [];
+
+    // Recorremos mañana, tarde y noche
+    for (String franja in ['manana', 'tarde', 'noche']) {
+      final List<dynamic> tareas = franjas[franja] ?? [];
+      for (var tarea in tareas) {
+        // FILTRADO CRUCIAL: Solo añadimos si es medicamento
+        if (tarea['tipo'] == 'medicamento') {
+          medicamentosFiltrados.add(Map<String, dynamic>.from(tarea));
+        }
+      }
+    }
+    return medicamentosFiltrados;
+  }
+
   Future<Map<String, dynamic>?> obtenerHoy() async {
 
     try {

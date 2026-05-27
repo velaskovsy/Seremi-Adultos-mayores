@@ -1,45 +1,80 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:alarm/alarm.dart';
+import 'package:intl/intl.dart';
+import '../services/recordatorio_service.dart';
+import '../views/alarma_medicacion/alarma_medicacion_screen.dart'; // Asegúrate de que la ruta a tu vista sea la correcta
 
-class AlarmaViewModel extends ChangeNotifier {
-  final int alarmaId;
-  final String medicamento;
-  final String dosis;
-  final String instruccion;
-  final String hora;
+class AlarmViewModel extends ChangeNotifier {
+  final RecordatorioService _recordatorioService = RecordatorioService();
 
-  bool _isProcessing = false;
-  bool get isProcessing => _isProcessing;
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
 
-  AlarmaViewModel({
-    required this.alarmaId,
-    required this.medicamento,
-    required this.dosis,
-    required this.instruccion,
-    required this.hora,
-  });
+  Timer? _alarmTimer;
+  final Map<int, String> _alarmasDisparadas = {};
 
-  /// Acción principal: Detiene la alarma física y procesa la confirmación
-  Future<bool> registrarToma() async {
-    if (_isProcessing) return false;
+  /// Iniciamos el monitoreo pasándole el context de la app
+  void iniciarMonitoreoDeAlarmas(BuildContext context) {
+    _alarmTimer?.cancel();
 
-    _isProcessing = true;
-    notifyListeners();
+    // Ejecuta la primera revisión inmediata
+    sincronizarYVerificarAlarmas(context);
 
+    // Revisa cada 15 segundos
+    _alarmTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      sincronizarYVerificarAlarmas(context);
+    });
+  }
+
+  void detenerMonitoreo() {
+    _alarmTimer?.cancel();
+    _alarmasDisparadas.clear();
+  }
+
+  Future<void> sincronizarYVerificarAlarmas(BuildContext context) async {
     try {
-      // 1. Detener el sonido y vibración del teléfono de forma nativa
-      await Alarm.stop(alarmaId);
+      final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
+      if (listadoMedicamentos.isEmpty) return;
 
-      // 2. Aquí puedes añadir tu lógica de SQLite para guardar el historial
-      // await _dbHelper.marcarComoTomado(alarmaId, DateTime.now());
+      final DateTime ahora = DateTime.now();
+      final String horaActualStr = DateFormat('HH:mm').format(ahora);
 
-      _isProcessing = false;
-      notifyListeners();
-      return true; // Éxito
+      for (var medicamento in listadoMedicamentos) {
+        final String horaMedicamento = medicamento['hora'] ?? '';
+        final int idMedicamento = medicamento['id'] ?? 0;
+
+        if (horaMedicamento.isEmpty) continue;
+
+        // Comparamos hora y minuto
+        if (horaMedicamento.trim() == horaActualStr) {
+
+          // Control para que salte una sola vez en este minuto
+          if (_alarmasDisparadas[idMedicamento] == horaActualStr) {
+            continue;
+          }
+          _alarmasDisparadas[idMedicamento] = horaActualStr;
+
+          // ¡SOLUCIÓN AQUÍ! En lugar de lanzar una notificación,
+          // obligamos a Flutter a abrir tu AlarmScreen encima de todo.
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AlarmScreen(medicamento: medicamento),
+              ),
+            );
+          }
+          print("¡PANTALLA DE ALARMA LANZADA DIRECTAMENTE para: ${medicamento['nombre']}!");
+        }
+      }
     } catch (e) {
-      _isProcessing = false;
-      notifyListeners();
-      return false; // Error
+      print("Error al verificar horarios de alarmas: $e");
     }
+  }
+
+  @override
+  void dispose() {
+    detenerMonitoreo();
+    super.dispose();
   }
 }
