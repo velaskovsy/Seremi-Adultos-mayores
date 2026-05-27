@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/cita_medica_service.dart';
 
+
 class AddAppointmentViewModel extends ChangeNotifier {
   final CitaMedicaService _service = CitaMedicaService();
 
@@ -107,56 +108,27 @@ class AddAppointmentViewModel extends ChangeNotifier {
     return true;
   }
 
-  // ── Guardar (Con Prints detallados por cada día) ─────────
+  // ── Guardar ──────────────────────────────────────────────
   Future<bool> guardar() async {
     _guardando = true;
     _errorGuardar = null;
     notifyListeners();
 
-    bool todosExitosos = true;
-
-    for (int i = 0; i < 7; i++) {
-      final DateTime fechaRecordatorio = _fecha!.add(Duration(days: i));
-
-      // Formateamos la fecha en formato YYYY-MM-DD para el print
-      final String fechaFormateada =
-          '${fechaRecordatorio.year}-${fechaRecordatorio.month.toString().padLeft(2, '0')}-${fechaRecordatorio.day.toString().padLeft(2, '0')}';
-
-      // ── PRINT DE CONTROL: Aquí ves qué se está enviando exactamente ──
-      debugPrint('==================================================');
-      debugPrint('👉 ENVIANDO RECORDATORIO [Iteración ${i + 1} de 7]');
-      debugPrint('📅 Fecha calculada: $fechaFormateada');
-      debugPrint('⏰ Hora:            $horaTexto');
-      debugPrint('📍 Lugar:           $_lugar');
-      debugPrint('👤 Profesional:     $_profesional');
-      debugPrint('📝 Notas:           ${_notas.trim().isNotEmpty ? _notas : 'null'}');
-      debugPrint('==================================================');
-
-      final exito = await _service.crearCita(
-        fecha: fechaRecordatorio,
-        hora: horaTexto,
-        lugar: _lugar,
-        profesional: _profesional,
-        notas: _notas.trim().isNotEmpty ? _notas : null,
-      );
-
-      if (exito) {
-        debugPrint('✅ ¡Éxito! Recordatorio del día $fechaFormateada guardado correctamente.\n');
-      } else {
-        todosExitosos = false;
-        debugPrint('❌ ¡ERROR! El servicio falló al guardar el día $fechaFormateada.\n');
-      }
-
-      // Pequeña pausa para no saturar el backend en la ráfaga
-      await Future.delayed(const Duration(milliseconds: 200));
-    }
+    final exito = await _service.crearCita(
+      fecha: _fecha!,
+      hora: horaTexto,
+      lugar: _lugar,
+      profesional: _profesional,
+      notas: _notas.trim().isNotEmpty ? _notas : null,
+    );
 
     _guardando = false;
-    if (!todosExitosos) {
-      _errorGuardar = 'Algunos recordatorios no se pudieron guardar. Verifica tu conexión.';
+    if (!exito) {
+      _errorGuardar = 'No se pudo guardar. Verifica tu conexión.';
     }
     notifyListeners();
 
-    return todosExitosos;
+    return exito;
   }
+
 }
