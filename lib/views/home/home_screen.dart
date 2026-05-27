@@ -336,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -365,6 +365,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: colorRelleno,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: colorBorde, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    offset: const Offset(0, 4),
+                    blurRadius: 6,
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
