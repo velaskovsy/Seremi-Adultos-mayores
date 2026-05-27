@@ -67,7 +67,7 @@ class AddMeasurementViewModel extends ChangeNotifier {
     final hoy = DateTime.now();
     final manana = DateTime(hoy.year, hoy.month, hoy.day + 1);
     final seleccionada =
-        DateTime(_fechaPrimera!.year, _fechaPrimera!.month, _fechaPrimera!.day);
+    DateTime(_fechaPrimera!.year, _fechaPrimera!.month, _fechaPrimera!.day);
     if (seleccionada == DateTime(hoy.year, hoy.month, hoy.day)) return 'HOY';
     if (seleccionada == manana) return 'MAÑANA';
     return '${_fechaPrimera!.day}/${_fechaPrimera!.month}/${_fechaPrimera!.year}';
@@ -155,14 +155,13 @@ class AddMeasurementViewModel extends ChangeNotifier {
     return valido;
   }
 
-  // ─── Guardar: sube foto a Supabase y guarda en Railway ────
-
+  // ─── Guardar: Modificado para enviar 7 días (cada 24 horas) ────
   Future<bool> guardar() async {
     _guardando = true;
     _errorGuardar = null;
     notifyListeners();
 
-    // Subir foto a Supabase (opcional)
+    // 1. Subir la foto una sola vez (si existe) para no duplicar archivos en Supabase
     String? urlFoto;
     if (_fotoInstrumento != null) {
       urlFoto = await _storageService.subirFoto(_fotoInstrumento!, 'mediciones');
@@ -174,20 +173,52 @@ class AddMeasurementViewModel extends ChangeNotifier {
       return '$hora:$min';
     }).toList();
 
-    final exito = await _medicionService.crearMedicion(
-      tipoMedicion: _tipoMedicion,
-      horas: horasFormateadas,
-      fecha: _fecha,
-      instrucciones: _instrucciones.isNotEmpty ? _instrucciones : null,
-      urlFoto: urlFoto,
-    );
+    bool todosExitosos = true;
+    // Si _fecha es null, usamos la fecha de hoy por seguridad
+    final DateTime fechaBase = _fecha ?? DateTime.now();
+
+    // 2. Ciclo FOR para repetir el guardado por 7 días consecutivos
+    for (int i = 0; i < 7; i++) {
+      final DateTime fechaRecordatorio = fechaBase.add(Duration(days: i));
+
+      // Formateo simple para el print en consola (YYYY-MM-DD)
+      final String fechaString =
+          '${fechaRecordatorio.year}-${fechaRecordatorio.month.toString().padLeft(2, '0')}-${fechaRecordatorio.day.toString().padLeft(2, '0')}';
+
+      // ── DEBUG PRINTS EN CONSOLA ──
+      debugPrint('==================================================');
+      debugPrint('👉 ENVIANDO MEDICIÓN [Iteración ${i + 1} de 7]');
+      debugPrint('📅 Fecha cálculo (+${i * 24} hrs): $fechaString');
+      debugPrint('📋 Tipo:        $_tipoMedicion');
+      debugPrint('⏰ Horas:       $horasFormateadas');
+      debugPrint('📸 URL Foto:    $urlFoto');
+      debugPrint('==================================================');
+
+      final exito = await _medicionService.crearMedicion(
+        tipoMedicion: _tipoMedicion,
+        horas: horasFormateadas,
+        fecha: fechaRecordatorio,
+        instrucciones: _instrucciones.isNotEmpty ? _instrucciones : null,
+        urlFoto: urlFoto,
+      );
+
+      if (exito) {
+        debugPrint('✅ ¡Éxito! Registro para el día $fechaString guardado.\n');
+      } else {
+        todosExitosos = false;
+        debugPrint('❌ ¡ERROR! Falló la inserción del día $fechaString.\n');
+      }
+
+      // Pequeña pausa de seguridad (200 milisegundos) para evitar colisiones en ráfaga
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
 
     _guardando = false;
-    if (!exito) {
-      _errorGuardar = 'No se pudo guardar. Verifica tu conexión e intenta de nuevo.';
+    if (!todosExitosos) {
+      _errorGuardar = 'Algunos recordatorios no se pudieron guardar. Verifica tu conexión e intenta de nuevo.';
     }
     notifyListeners();
 
-    return exito;
+    return todosExitosos;
   }
 }
