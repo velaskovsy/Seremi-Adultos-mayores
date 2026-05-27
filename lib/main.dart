@@ -8,6 +8,7 @@ import 'package:seremi_adultos_mayores/viewmodels/add_activity_viewmodel.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_measurement_viewmodel.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/register_viewmodel.dart';
+import 'viewmodels/home_viewmodel.dart';
 import 'viewmodels/alarma_medicacion_viewmodel.dart';
 import 'viewmodels/add_medication_viewmodel.dart';
 import 'views/login/login_screen.dart';
@@ -53,6 +54,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AddAppointmentViewModel()),
         // NUEVO: Agregamos el AlarmViewModel a la lista para que puedas usarlo en tus vistas
         ChangeNotifierProvider(create: (_) => AlarmViewModel()),
+        ChangeNotifierProvider(create: (_) => HomeViewModel()),
       ],
       // Pasamos la pantalla calculada (Login o la Alarma) a nuestra app principal
       child: MyApp(pantallaInicial: pantallaInicial),

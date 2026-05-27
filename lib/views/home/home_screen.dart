@@ -1,11 +1,11 @@
+// lib/views/home/home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:provider/provider.dart'; // <- IMPORTANTE: Agregamos provider
+import 'package:provider/provider.dart';
 
 import '../../core/widgets/app_footer.dart';
 import '../../services/auth_service.dart';
 import '../../viewmodels/home_viewmodel.dart';
-import '../../viewmodels/alarma_medicacion_viewmodel.dart'; // <- NUEVO: Tu viewmodel de alarmas
+import '../../viewmodels/alarma_medicacion_viewmodel.dart'; // Importación del ViewModel de alarmas
 
 import '../login/login_screen.dart';
 import '../reminder/add_reminder_screen.dart';
@@ -30,74 +30,43 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     vm.cargar();
 
-    // NUEVO: Activamos el motor de alarmas periódicas cada 15 segundos
-    // Usamos postFrameCallback para asegurarnos de que la pantalla ya se dibujó antes de arrancar el loop
+    // Activamos el motor de alarmas apenas la pantalla se termina de renderizar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas(context);
     });
   }
 
-  // NUEVO: Si el usuario sale del Home o cierra sesión, detenemos el Timer de 15 segundos por optimización
   @override
   void dispose() {
-    // Usamos un try/catch por si el contexto ya no es accesible al destruir la vista
     try {
       Provider.of<AlarmViewModel>(context, listen: false).detenerMonitoreo();
     } catch (e) {
-      print("No se pudo detener el monitoreo: $e");
+      debugPrint("No se pudo detener el monitoreo: $e");
     }
     super.dispose();
   }
 
-  // Fecha dinámica
+  // Generador de fecha dinámica en español
   String _obtenerFecha() {
     final ahora = DateTime.now();
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-    const dias = [
-      'Lunes',
-      'Martes',
-      'Miércoles',
-      'Jueves',
-      'Viernes',
-      'Sábado',
-      'Domingo'
-    ];
-
-    const meses = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre'
-    ];
-
-    final dia = dias[ahora.weekday - 1];
-    final mes = meses[ahora.month - 1];
-
-    return '$dia, ${ahora.day} de $mes';
+    return '${dias[ahora.weekday - 1]}, ${ahora.day} de ${meses[ahora.month - 1]}';
   }
 
   Future<void> _handleLogout(BuildContext context) async {
     final authService = AuthService();
 
-    // Antes de desloguear, apagamos el timer de las alarmas
+    // Apagamos el timer antes de salir
     Provider.of<AlarmViewModel>(context, listen: false).detenerMonitoreo();
-
     await authService.logout();
 
     if (context.mounted) {
-      Navigator.push(
+      Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => LoginScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+            (route) => false,
       );
     }
   }
@@ -110,10 +79,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: Column(
         children: [
-          // HEADER
+          // HEADER AZUL
           Stack(
             children: [
               Container(
@@ -125,24 +93,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Salud\nMayor',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Roboto',
                     fontSize: 24,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-
               Positioned(
                 top: 40,
                 left: 10,
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.exit_to_app,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                  tooltip: 'Cerrar sesión',
+                  icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 32),
                   onPressed: () => _handleLogout(context),
                 ),
               ),
@@ -156,46 +117,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const SizedBox(height: 20),
 
-                  // FECHA
+                  // FECHA ACTUAL
                   Center(
                     child: Text(
                       _obtenerFecha(),
-                      style: const TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black,
-                      ),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
                     ),
                   ),
-
                   const SizedBox(height: 16),
 
-                  // PROXIMA TAREA
+                  // INDICADOR DE PRÓXIMA TAREA
                   Center(
                     child: Container(
                       width: 344,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: const Color(0xFFD0EFFF),
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                          color: Colors.blueAccent,
-                          width: 1.5,
-                        ),
+                        border: Border.all(color: Colors.blueAccent, width: 1.5),
                       ),
                       child: Center(
                         child: Text(
                           'Su próxima tarea es a las\n${vm.data?['proxima_tarea'] ?? '--:--'}',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'Roboto',
-                            fontSize: 20,
-                            color: Colors.black87,
-                          ),
+                          style: const TextStyle(fontSize: 20, color: Colors.black87),
                         ),
                       ),
                     ),
@@ -203,14 +148,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 20),
 
-                  // BOTON
+                  // 🔥 BOTÓN AÑADIR RECORDATORIO (CORREGIDO SIN EL CONST ERRÓNEO)
                   Center(
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3), // Corregido con .withOpacity directo para compatibilidad estándar
+                            color: Colors.black.withOpacity(0.3),
                             offset: const Offset(4, 6),
                             blurRadius: 8,
                           ),
@@ -222,15 +167,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4CAF50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                           ),
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const AddReminderScreen(),
+                                builder: (_) => const AddReminderScreen(), // Queda limpio aquí
                               ),
                             );
                           },
@@ -240,25 +183,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               Container(
                                 width: 38,
                                 height: 38,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.add,
-                                  color: Color(0xFF4CAF50),
-                                  size: 28,
-                                ),
+                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                child: const Icon(Icons.add, color: Color(0xFF4CAF50), size: 28),
                               ),
                               const SizedBox(width: 12),
                               const Text(
                                 'AÑADIR RECORDATORIO',
-                                style: TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 24,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -269,41 +200,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 24),
 
-                  // HORARIO DEL DIA
+                  // SECCIONES DE HORARIOS
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 17),
                     child: Row(
                       children: const [
-                        Icon(
-                          Icons.access_time,
-                          color: Color(0xFF000080),
-                          size: 38,
-                        ),
+                        Icon(Icons.access_time, color: Color(0xFF000080), size: 38),
                         SizedBox(width: 10),
-                        Text(
-                          'HORARIO DEL DÍA',
-                          style: TextStyle(
-                            fontFamily: 'Roboto',
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
+                        Text('HORARIO DEL DÍA', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
-
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 17),
-                    child: Divider(
-                      color: Colors.black,
-                      thickness: 1,
-                    ),
+                    child: Divider(color: Colors.black, thickness: 1),
                   ),
-
                   const SizedBox(height: 12),
 
-                  // MAÑANA
+                  // FRANJA MAÑANA
                   _buildFranja(
                     color: const Color(0xFFFFE0B2),
                     icono: Icons.wb_twilight,
@@ -311,16 +225,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     titulo: 'MAÑANA',
                     tituloColor: Colors.orange,
                     vacio: manana.isEmpty,
-                    imagenVacio: 'assets/imagenes/mañana.jpg',
+                    imagenVacio: 'assets/imagenes/manana.jpg', // Path corregido sin "ñ"
                     mensajeVacio: 'No hay eventos\nprogramados',
-                    tarjetas: manana.map<Widget>((item) {
-                      return _buildRecordatorio(item);
-                    }).toList(),
+                    tarjetas: manana.map<Widget>((item) => _buildRecordatorio(item)).toList(),
                   ),
-
                   const SizedBox(height: 12),
 
-                  // TARDE
+                  // FRANJA TARDE
                   _buildFranja(
                     color: const Color(0xFFE3F2FD),
                     icono: Icons.wb_sunny,
@@ -330,14 +241,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     vacio: tarde.isEmpty,
                     imagenVacio: 'assets/imagenes/dia.jpg',
                     mensajeVacio: 'No hay eventos\nprogramados',
-                    tarjetas: tarde.map<Widget>((item) {
-                      return _buildRecordatorio(item);
-                    }).toList(),
+                    tarjetas: tarde.map<Widget>((item) => _buildRecordatorio(item)).toList(),
                   ),
-
                   const SizedBox(height: 12),
 
-                  // NOCHE
+                  // FRANJA NOCHE
                   _buildFranja(
                     color: const Color(0xFFE8EAF6),
                     icono: Icons.nightlight_round,
@@ -347,17 +255,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     vacio: noche.isEmpty,
                     imagenVacio: 'assets/imagenes/noche.jpg',
                     mensajeVacio: 'No hay eventos\nprogramados',
-                    tarjetas: noche.map<Widget>((item) {
-                      return _buildRecordatorio(item);
-                    }).toList(),
+                    tarjetas: noche.map<Widget>((item) => _buildRecordatorio(item)).toList(),
                   ),
-
                   const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
-
           const AppFooter(),
         ],
       ),
@@ -380,52 +284,23 @@ class _HomeScreenState extends State<HomeScreen> {
         Container(
           width: double.infinity,
           color: color,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 17,
-            vertical: 16,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
           child: Row(
             children: [
-              Icon(
-                icono,
-                color: iconoColor,
-                size: 36,
-              ),
+              Icon(icono, color: iconoColor, size: 36),
               const SizedBox(width: 10),
-              Text(
-                titulo,
-                style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: tituloColor,
-                ),
-              ),
+              Text(titulo, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: tituloColor)),
             ],
           ),
         ),
-
         if (vacio)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               children: [
-                Image.asset(
-                  imagenVacio,
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.contain,
-                ),
+                Image.asset(imagenVacio, width: 120, height: 120, fit: BoxFit.contain),
                 const SizedBox(height: 8),
-                Text(
-                  mensajeVacio,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Roboto',
-                    fontSize: 24,
-                    color: Colors.black54,
-                  ),
-                ),
+                Text(mensajeVacio, textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, color: Colors.black54)),
               ],
             ),
           )
@@ -437,86 +312,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRecordatorio(Map<String, dynamic> item) {
     Color color;
-
     switch (item['color']) {
-      case 'verde':
-        color = Colors.green;
-        break;
-      case 'rojo':
-        color = Colors.red;
-        break;
-      case 'morado':
-        color = Colors.purple;
-        break;
-      case 'azul':
-        color = Colors.blue;
-        break;
-      default:
-        color = Colors.white;
+      case 'verde': color = Colors.green; break;
+      case 'rojo': color = Colors.red; break;
+      case 'morado': color = Colors.purple; break;
+      case 'azul': color = Colors.blue; break;
+      default: color = Colors.white;
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: color,
-          width: 2,
-        ),
+        border: Border.all(color: color, width: 2),
       ),
       child: Row(
         children: [
-          // COLOR
-          Container(
-            width: 12,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-
+          Container(width: 12, height: 60, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10))),
           const SizedBox(width: 12),
-
-          // TEXTO
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item['nombre'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(item['nombre'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text(
-                  item['detalle'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(item['detalle'] ?? '', style: const TextStyle(fontSize: 16, color: Colors.black87)),
               ],
             ),
           ),
-
           const SizedBox(width: 12),
-
-          // HORA
-          Text(
-            item['hora'] ?? '',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(item['hora'] ?? '', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         ],
       ),
     );
