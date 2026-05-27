@@ -1,47 +1,80 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-// Asegúrate de importar correctamente tus servicios:
+import 'package:intl/intl.dart';
 import '../services/recordatorio_service.dart';
-import '../services/notificacion_service.dart';
+import '../views/alarma_medicacion/alarma_medicacion_screen.dart'; // Asegúrate de que la ruta a tu vista sea la correcta
 
 class AlarmViewModel extends ChangeNotifier {
   final RecordatorioService _recordatorioService = RecordatorioService();
-  final NotificationService _notificationService = NotificationService();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  /// Método principal que descarga los datos y activa las alarmas
-  Future<void> sincronizarAlarmasDelDia() async {
-    _isLoading = true;
-    notifyListeners();
+  Timer? _alarmTimer;
+  final Map<int, String> _alarmasDisparadas = {};
 
+  /// Iniciamos el monitoreo pasándole el context de la app
+  void iniciarMonitoreoDeAlarmas(BuildContext context) {
+    _alarmTimer?.cancel();
+
+    // Ejecuta la primera revisión inmediata
+    sincronizarYVerificarAlarmas(context);
+
+    // Revisa cada 15 segundos
+    _alarmTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      sincronizarYVerificarAlarmas(context);
+    });
+  }
+
+  void detenerMonitoreo() {
+    _alarmTimer?.cancel();
+    _alarmasDisparadas.clear();
+  }
+
+  Future<void> sincronizarYVerificarAlarmas(BuildContext context) async {
     try {
-      // 1. Obtenemos la lista que ya filtramos en el servicio
       final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
+      if (listadoMedicamentos.isEmpty) return;
 
-      // 2. Revisamos los horarios de cada medicamento
+      final DateTime ahora = DateTime.now();
+      final String horaActualStr = DateFormat('HH:mm').format(ahora);
+
       for (var medicamento in listadoMedicamentos) {
-        final String horaStr = medicamento['hora'] ?? ''; // Ej: "14:30"
-        if (horaStr.isEmpty) continue;
+        final String horaMedicamento = medicamento['hora'] ?? '';
+        final int idMedicamento = medicamento['id'] ?? 0;
 
-        // Convertimos el String "14:30" a un objeto DateTime real de hoy
-        final partes = horaStr.split(':');
-        final DateTime ahora = DateTime.now();
-        final DateTime horaAlarma = DateTime(
-            ahora.year, ahora.month, ahora.day,
-            int.parse(partes[0]), int.parse(partes[1])
-        );
+        if (horaMedicamento.isEmpty) continue;
 
-        // Si la hora de la pastilla aún no ha pasado, programamos el salto de pantalla
-        if (horaAlarma.isAfter(ahora)) {
-          await _notificationService.dispararNotificacionPantallaCompleta(medicamento);
+        // Comparamos hora y minuto
+        if (horaMedicamento.trim() == horaActualStr) {
+
+          // Control para que salte una sola vez en este minuto
+          if (_alarmasDisparadas[idMedicamento] == horaActualStr) {
+            continue;
+          }
+          _alarmasDisparadas[idMedicamento] = horaActualStr;
+
+          // ¡SOLUCIÓN AQUÍ! En lugar de lanzar una notificación,
+          // obligamos a Flutter a abrir tu AlarmScreen encima de todo.
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AlarmScreen(medicamento: medicamento),
+              ),
+            );
+          }
+          print("¡PANTALLA DE ALARMA LANZADA DIRECTAMENTE para: ${medicamento['nombre']}!");
         }
       }
     } catch (e) {
-      print("Error en AlarmViewModel: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      print("Error al verificar horarios de alarmas: $e");
     }
+  }
+
+  @override
+  void dispose() {
+    detenerMonitoreo();
+    super.dispose();
   }
 }
