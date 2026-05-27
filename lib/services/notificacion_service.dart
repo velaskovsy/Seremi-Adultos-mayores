@@ -31,25 +31,27 @@ class NotificationService {
       'medicamentos_channel_id',
       'Recordatorios de Medicación',
       channelDescription: 'Canal de alta prioridad para asegurar la toma de remedios',
-      importance: Importance.max,
-      priority: Priority.high,
+      importance: Importance.max, // Máxima importancia
+      priority: Priority.high,     // Máxima prioridad
 
-      // CONFIGURACIÓN NATIVA PARA LA ALARMA
-      fullScreenIntent: true, // <- ESTO HACE QUE SALTE LA PANTALLA COMPLETA
+      // ESTAS LÍNEAS TRABAJAN JUNTAS PARA FORZAR EL SALTO DE PANTALLA
+      fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,
       audioAttributesUsage: AudioAttributesUsage.alarm,
-      ongoing: true, // Bloquea que el usuario la borre deslizando
+      ongoing: true,
+
+      // CONFIGURACIÓN EXTRA DE VISIBILIDAD (Fuerza a mostrarse sobre todo)
+      visibility: NotificationVisibility.public,
     );
 
     NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
 
-    // SOLUCIÓN ERROR 3 y 4: El método .show() ahora obliga a nombrar todos sus argumentos
     await _notificationsPlugin.show(
       id: medicamento['id'] ?? 0,
       title: '¡Hora de tu medicación!',
       body: 'Debes tomar: ${medicamento['nombre']}',
       notificationDetails: platformDetails,
-      payload: jsonEncode(medicamento), // Guardamos el JSON para que la vista lo lea al abrirse
+      payload: jsonEncode(medicamento),
     );
   }
 }

@@ -1,17 +1,55 @@
+// lib/views/alarma_medicacion/alarma_medicacion_screen.dart
 import 'package:flutter/material.dart';
+import '../../services/voice_service.dart'; // Importamos tu nuevo servicio de voz
 
-class AlarmScreen extends StatelessWidget {
+class AlarmScreen extends StatefulWidget {
   final Map<String, dynamic> medicamento;
 
   const AlarmScreen({super.key, required this.medicamento});
 
   @override
+  State<AlarmScreen> createState() => _AlarmScreenState();
+}
+
+class _AlarmScreenState extends State<AlarmScreen> {
+  final VoiceService _voiceService = VoiceService();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 🔥 Captura el momento exacto en que la pantalla aparece y habla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reproducirAlarmaPorVoz();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Si la pantalla se destruye, matamos el audio por seguridad
+    _voiceService.detener();
+    super.dispose();
+  }
+
+  void _reproducirAlarmaPorVoz() {
+    final String nombre = widget.medicamento['nombre'] ?? 'Medicamento';
+    final String detalle = widget.medicamento['detalle'] ?? '';
+
+    String mensaje = "Atención. Es hora de tomar tu medicamento: $nombre. ";
+    if (detalle.trim().isNotEmpty) {
+      mensaje += "Detalle e indicaciones: $detalle.";
+    }
+
+    _voiceService.hablar(mensaje);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final String hora = medicamento['hora'] ?? '--:--';
-    final String nombre = medicamento['nombre'] ?? 'Medicamento';
-    final String detalle = medicamento['detalle'] ?? '';
-    final String? urlCaja = medicamento['url_foto_caja'];
-    final String? urlRemedio = medicamento['url_foto_remedio'];
+    final String hora = widget.medicamento['hora'] ?? '--:--';
+    final String nombre = widget.medicamento['nombre'] ?? 'Medicamento';
+    final String detalle = widget.medicamento['detalle'] ?? '';
+    final String? urlCaja = widget.medicamento['url_foto_caja'];
+    final String? urlRemedio = widget.medicamento['url_foto_remedio'];
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFC5C5), // Fondo rosado
@@ -72,9 +110,9 @@ class AlarmScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
+                        children: const [
                           Text('CAJA', style: TextStyle(fontWeight: FontWeight.bold)),
                           Text('PASTILLA', style: TextStyle(fontWeight: FontWeight.bold)),
                         ],
@@ -97,7 +135,10 @@ class AlarmScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    _voiceService.detener(); // Detiene la voz inmediatamente
+                    Navigator.of(context).pop();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1AA23A),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
