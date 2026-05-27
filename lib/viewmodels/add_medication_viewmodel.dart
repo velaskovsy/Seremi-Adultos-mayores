@@ -131,6 +131,20 @@ class AddMedicationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  int _obtenerHorasIntervalo(String textoIntervalo) {
+    switch (textoIntervalo) {
+      case 'Cada hora':     return 1;
+      case 'Cada 2 horas':   return 2;
+      case 'Cada 3 horas':   return 3;
+      case 'Cada 4 horas':   return 4;
+      case 'Cada 6 horas':   return 6;
+      case 'Cada 8 horas':   return 8;
+      case 'Cada 12 horas':  return 12;
+      case 'Cada 24 horas':  return 24;
+      default:               return 24; // Por defecto un día
+    }
+  }
+
   // ─── Validación paso 1 ────────────────────────────────────
 
   bool validarPaso1() {
@@ -154,7 +168,7 @@ class AddMedicationViewModel extends ChangeNotifier {
     _errorGuardar = null;
     notifyListeners();
 
-    // Subir fotos a Supabase (opcionales)
+    // 1. Subir fotos a Supabase (opcionales)
     String? urlFotoCaja;
     String? urlFotoRemedio;
 
@@ -162,26 +176,62 @@ class AddMedicationViewModel extends ChangeNotifier {
       urlFotoCaja = await _storageService.subirFoto(_fotoCaja!, 'medicamentos');
     }
     if (_fotoRemedio != null) {
-      urlFotoRemedio = await   _storageService.subirFoto(_fotoRemedio!, 'medicamentos');
+      urlFotoRemedio = await _storageService.subirFoto(_fotoRemedio!, 'medicamentos');
     }
 
-    final exito = await _medicamentoService.crearMedicamento(
-      nombre: _nombre,
-      dosis: _dosis,
-      hora: horaTexto,
-      fecha: _fecha,
-      intervalo: _intervalo,
-      instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
-      urlFotoCaja: urlFotoCaja,
-      urlFotoRemedio: urlFotoRemedio,
+    // 2. Establecer la fecha y hora inicial combinadas
+    // Si _fecha es null por alguna razón, usamos el día de hoy
+    final fechaBase = _fecha ?? DateTime.now();
+    DateTime fechaRegistroActual = DateTime(
+      fechaBase.year,
+      fechaBase.month,
+      fechaBase.day,
+      _hora.hour,
+      _hora.minute,
     );
 
+    // 3. Definir el límite temporal (1 semana desde la fecha inicial)
+    final DateTime fechaLimite = fechaRegistroActual.add(const Duration(days: 7));
+
+    // 4. Obtener las horas que se deben sumar en cada ciclo
+    int horasASumar = _obtenerHorasIntervalo(_intervalo);
+
+    bool todosExitosos = true;
+
+    // 5. Bucle iterativo para generar y guardar los registros
+    while (fechaRegistroActual.isBefore(fechaLimite)) {
+
+      // Formateamos la hora en formato HH:mm para el registro individual actual
+      final h = fechaRegistroActual.hour.toString().padLeft(2, '0');
+      final m = fechaRegistroActual.minute.toString().padLeft(2, '0');
+      final String horaFormateada = '$h:$m';
+
+      // Guardamos la toma específica en la base de datos
+      final exitoRegistro = await _medicamentoService.crearMedicamento(
+        nombre: _nombre,
+        dosis: _dosis,
+        hora: horaFormateada,
+        fecha: fechaRegistroActual, // Enviamos el DateTime con el día exacto calculado
+        intervalo: _intervalo,
+        instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
+        urlFotoCaja: urlFotoCaja,
+        urlFotoRemedio: urlFotoRemedio,
+      );
+
+      if (!exitoRegistro) {
+        todosExitosos = false;
+      }
+
+      // El motor de Dart avanza la fecha automáticamente controlando cambios de día/mes
+      fechaRegistroActual = fechaRegistroActual.add(Duration(hours: horasASumar));
+    }
+
     _guardando = false;
-    if (!exito) {
-      _errorGuardar = 'No se pudo guardar. Verifica tu conexión e intenta de nuevo.';
+    if (!todosExitosos) {
+      _errorGuardar = 'Algunos recordatorios no se pudieron guardar de forma completa.';
     }
     notifyListeners();
 
-    return exito;
+    return todosExitosos;
   }
 }
