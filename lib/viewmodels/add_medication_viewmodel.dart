@@ -162,7 +162,7 @@ class AddMedicationViewModel extends ChangeNotifier {
       urlFotoCaja = await _storageService.subirFoto(_fotoCaja!, 'medicamentos');
     }
     if (_fotoRemedio != null) {
-      urlFotoRemedio = await _storageService.subirFoto(_fotoRemedio!, 'medicamentos');
+      urlFotoRemedio = await   _storageService.subirFoto(_fotoRemedio!, 'medicamentos');
     }
 
     final exito = await _medicamentoService.crearMedicamento(

@@ -495,8 +495,12 @@ class _HomeScreenState extends State<HomeScreen> {
         color = Colors.green;
         break;
 
-      case 'naranja':
-        color = Colors.orange;
+      case 'rojo':
+        color = Colors.red;
+        break;
+
+      case 'rojo':
+        color = Colors.red;
         break;
 
       case 'rojo':
@@ -504,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
 
       default:
-        color = Colors.blue;
+        color = Colors.white;
     }
 
     return Container(
