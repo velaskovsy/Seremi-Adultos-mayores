@@ -1,45 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:alarm/alarm.dart';
+// Asegúrate de importar correctamente tus servicios:
+import '../services/recordatorio_service.dart';
+import '../services/notificacion_service.dart';
 
-class AlarmaViewModel extends ChangeNotifier {
-  final int alarmaId;
-  final String medicamento;
-  final String dosis;
-  final String instruccion;
-  final String hora;
+class AlarmViewModel extends ChangeNotifier {
+  final RecordatorioService _recordatorioService = RecordatorioService();
+  final NotificationService _notificationService = NotificationService();
 
-  bool _isProcessing = false;
-  bool get isProcessing => _isProcessing;
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
 
-  AlarmaViewModel({
-    required this.alarmaId,
-    required this.medicamento,
-    required this.dosis,
-    required this.instruccion,
-    required this.hora,
-  });
-
-  /// Acción principal: Detiene la alarma física y procesa la confirmación
-  Future<bool> registrarToma() async {
-    if (_isProcessing) return false;
-
-    _isProcessing = true;
+  /// Método principal que descarga los datos y activa las alarmas
+  Future<void> sincronizarAlarmasDelDia() async {
+    _isLoading = true;
     notifyListeners();
 
     try {
-      // 1. Detener el sonido y vibración del teléfono de forma nativa
-      await Alarm.stop(alarmaId);
+      // 1. Obtenemos la lista que ya filtramos en el servicio
+      final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
 
-      // 2. Aquí puedes añadir tu lógica de SQLite para guardar el historial
-      // await _dbHelper.marcarComoTomado(alarmaId, DateTime.now());
+      // 2. Revisamos los horarios de cada medicamento
+      for (var medicamento in listadoMedicamentos) {
+        final String horaStr = medicamento['hora'] ?? ''; // Ej: "14:30"
+        if (horaStr.isEmpty) continue;
 
-      _isProcessing = false;
-      notifyListeners();
-      return true; // Éxito
+        // Convertimos el String "14:30" a un objeto DateTime real de hoy
+        final partes = horaStr.split(':');
+        final DateTime ahora = DateTime.now();
+        final DateTime horaAlarma = DateTime(
+            ahora.year, ahora.month, ahora.day,
+            int.parse(partes[0]), int.parse(partes[1])
+        );
+
+        // Si la hora de la pastilla aún no ha pasado, programamos el salto de pantalla
+        if (horaAlarma.isAfter(ahora)) {
+          await _notificationService.dispararNotificacionPantallaCompleta(medicamento);
+        }
+      }
     } catch (e) {
-      _isProcessing = false;
+      print("Error en AlarmViewModel: $e");
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return false; // Error
     }
   }
 }
