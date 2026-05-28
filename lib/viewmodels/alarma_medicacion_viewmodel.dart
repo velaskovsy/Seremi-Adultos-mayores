@@ -1,85 +1,94 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+// SOLUCIÓN DEFINITIVA AL UNDEFINED: Importación absoluta de tu proyecto corporativo
+import 'package:seremi_adultos_mayores/main.dart';
+
 import '../services/recordatorio_service.dart';
-import '../services/notificacion_service.dart'; // <- Importamos tu servicio de notificación nativo
+import '../services/notificacion_service.dart';
 import '../views/alarma_medicacion/alarma_medicacion_screen.dart';
+import '../views/alarma_presion/alarma_presion_screen.dart'; // Tu nueva interfaz del mockup
 
 class AlarmViewModel extends ChangeNotifier {
   final RecordatorioService _recordatorioService = RecordatorioService();
-  final NotificationService _notificationService = NotificationService(); // <- Instanciamos el servicio nativo
+  final NotificationService _notificationService = NotificationService();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
   Timer? _alarmTimer;
-  final Map<int, String> _alarmasDisparadas = {};
 
-  /// Iniciamos el monitoreo pasándole el context de la app
-  void iniciarMonitoreoDeAlarmas(BuildContext context) {
+  // Registro de alarmas disparadas para que no colapsen en el mismo minuto
+  final Map<String, String> _alarmasDisparadas = {};
+
+  /// Inicia el bucle central de 15 segundos
+  void iniciarMonitoreoDeAlarmas() {
     _alarmTimer?.cancel();
+    sincronizarYVerificarTodo();
 
-    // Ejecuta la primera revisión inmediata al cargar
-    sincronizarYVerificarAlarmas(context);
-
-    // Revisa periódicamente cada 15 segundos
     _alarmTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
-      sincronizarYVerificarAlarmas(context);
+      sincronizarYVerificarTodo();
     });
   }
 
-  /// Cancela el temporizador y limpia el historial de ejecuciones
   void detenerMonitoreo() {
     _alarmTimer?.cancel();
     _alarmasDisparadas.clear();
   }
 
-  /// Revisa los horarios locales/remotos y despierta al hardware si coincide el tiempo
-  Future<void> sincronizarYVerificarAlarmas(BuildContext context) async {
+  Future<void> sincronizarYVerificarTodo() async {
     try {
-      // Obtiene el listado de medicamentos (desde Railway o desde SharedPreferences si no hay señal)
-      final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
-      if (listadoMedicamentos.isEmpty) return;
-
-      // Formateamos la hora actual del dispositivo a "HH:mm" (Ej: "21:00")
       final DateTime ahora = DateTime.now();
       final String horaActualStr = DateFormat('HH:mm').format(ahora);
 
+      // ==========================================
+      // BARRIDO 1: BUSCAR MEDICAMENTOS
+      // ==========================================
+      final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
       for (var medicamento in listadoMedicamentos) {
-        final String horaMedicamento = medicamento['hora'] ?? '';
-        final int idMedicamento = medicamento['id'] ?? 0;
+        final String hora = medicamento['hora'] ?? '';
+        final int id = medicamento['id'] ?? 0;
+        final String llaveUnica = "med_${id}";
 
-        if (horaMedicamento.isEmpty) continue;
+        if (hora.isNotEmpty && hora.trim() == horaActualStr) {
+          if (_alarmasDisparadas[llaveUnica] == horaActualStr) continue;
+          _alarmasDisparadas[llaveUnica] = horaActualStr;
 
-        // Comparamos hora y minuto exactos
-        if (horaMedicamento.trim() == horaActualStr) {
-
-          // Control crítico: evita que la alarma se dispare en bucle dentro del mismo minuto
-          if (_alarmasDisparadas[idMedicamento] == horaActualStr) {
-            continue;
-          }
-          _alarmasDisparadas[idMedicamento] = horaActualStr;
-
-          // 1. PASO CLAVE PARA PANTALLA BLOQUEADA:
-          // Forzamos al sistema operativo a emitir un aviso sonoro intrusivo de alta prioridad.
-          // Esto obligará a Android a encender el display táctil y sacar la app del modo de suspensión profundo.
           await _notificationService.dispararNotificacionPantallaCompleta(medicamento);
 
-          // 2. LANZAMIENTO DE LA SCREEN:
-          // Empujamos inmediatamente tu vista rosada de Flutter sobre la interfaz actual.
-          if (context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AlarmScreen(medicamento: medicamento),
-              ),
-            );
-          }
-          print("¡SISTEMA COMBINADO ACTIVADO! Alarma lanzada para: ${medicamento['nombre']} a las $horaActualStr");
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (_) => AlarmScreen(medicamento: medicamento)),
+          );
+          print("¡Pantalla de Medicamento abierta con éxito!");
         }
       }
+
+      // ==========================================
+      // BARRIDO 2: BUSCAR MEDICIONES DE PRESIÓN
+      // ==========================================
+      final listadoMediciones = await _recordatorioService.obtenerSoloMediciones();
+      for (var medicion in listadoMediciones) {
+        final String hora = medicion['hora'] ?? '';
+        final int id = medicion['id'] ?? 0;
+        final String llaveUnica = "presion_${id}";
+
+        if (hora.isNotEmpty && hora.trim() == horaActualStr) {
+          if (_alarmasDisparadas[llaveUnica] == horaActualStr) continue;
+          _alarmasDisparadas[llaveUnica] = horaActualStr;
+
+          await _notificationService.dispararNotificacionPantallaCompleta(medicion);
+
+          // Lanza la pantalla de presión del mockup de forma segura
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (_) => AlarmaMedicionScreen(medicion: medicion)),
+          );
+          print("¡Pantalla de Medición de Presión abierta con éxito!");
+        }
+      }
+
     } catch (e) {
-      print("Error al verificar horarios de alarmas en el ViewModel: $e");
+      print("Error en el bucle continuo de alarmas: $e");
     }
   }
 

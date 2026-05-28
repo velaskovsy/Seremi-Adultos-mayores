@@ -17,27 +17,28 @@ import 'services/notificacion_service.dart';
 import 'views/alarma_medicacion/alarma_medicacion_screen.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Inicialización de Supabase (Se mantiene intacta de tu código)
+  // Inicialización de Supabase
   await Supabase.initialize(
     url: 'https://wtecnjrxjyynbnjkehso.supabase.co',
     anonKey: 'sb_publishable_gc6MXA9NgoYsWW5u8-6c8w_GzLUwfKR',
   );
 
-  // 2. NUEVO: Inicializar el canal nativo de notificaciones antes de arrancar la app
+  // Inicializar el canal nativo de notificaciones
   await NotificationService().initNotification();
 
-  // 3. NUEVO: Verificar si el sistema operativo abrió la app por la Alarma Intrusiva
+  // Verificar si el sistema operativo abrió la app por una Alarma Intrusiva
   final notificationDetails = await FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails();
 
-  Widget pantallaInicial = LoginScreen(); // Pantalla por defecto de tu app
+  Widget pantallaInicial = LoginScreen();
 
   if (notificationDetails?.didNotificationLaunchApp ?? false) {
     final payload = notificationDetails?.notificationResponse?.payload;
     if (payload != null) {
-      // Si hay payload, decodificamos el JSON del medicamento y forzamos que abra tu AlarmScreen directamente
       final Map<String, dynamic> medicamentoDatos = jsonDecode(payload);
       pantallaInicial = AlarmScreen(medicamento: medicamentoDatos);
     }
@@ -52,18 +53,17 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AddMeasurementViewModel()),
         ChangeNotifierProvider(create: (_) => AddActivityViewModel()),
         ChangeNotifierProvider(create: (_) => AddAppointmentViewModel()),
-        // NUEVO: Agregamos el AlarmViewModel a la lista para que puedas usarlo en tus vistas
+        // Registramos el único AlarmViewModel unificado
         ChangeNotifierProvider(create: (_) => AlarmViewModel()),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
       ],
-      // Pasamos la pantalla calculada (Login o la Alarma) a nuestra app principal
       child: MyApp(pantallaInicial: pantallaInicial),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  final Widget pantallaInicial; // <- NUEVO: Recibe la pantalla con la que debe arrancar
+  final Widget pantallaInicial;
 
   const MyApp({Key? key, required this.pantallaInicial}) : super(key: key);
 
@@ -72,7 +72,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Seremi Adultos Mayores',
       debugShowCheckedModeBanner: false,
-      // Tus traducciones locales se mantienen intactas
+
+      // 2. ASIGNACIÓN CLAVE: Enlazamos la llave global a la aplicación
+      navigatorKey: navigatorKey,
+
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -82,7 +85,6 @@ class MyApp extends StatelessWidget {
         Locale('es', 'ES'),
       ],
       builder: (context, child) {
-        // Tu configurador de textScaler para mantener fuentes fijas se mantiene intacto
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: const TextScaler.linear(1.0),
@@ -90,7 +92,6 @@ class MyApp extends StatelessWidget {
           child: child!,
         );
       },
-      // MODIFICADO: En vez de "home: LoginScreen()", usa la pantalla que calculó el main()
       home: pantallaInicial,
     );
   }
