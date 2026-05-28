@@ -32,7 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Activamos el motor de alarmas apenas la pantalla se termina de renderizar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas(context);
+      // CORREGIDO: Dejamos los paréntesis vacíos porque ya no requiere el context local
+      Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas();
     });
   }
 
