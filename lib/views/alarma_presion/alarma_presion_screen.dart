@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/voice_service.dart'; // Importa tu servicio de voz
 
+// ⚠️ IMPORTACIÓN DE TU PANTALLA DE REGISTRO DE PRESIÓN POST-ALARMA
+// Ajusta la ruta exacta según dónde tengas guardado este archivo
+import '../add measurement/add_measurement_presion_after_alarm.dart';
+
 class AlarmaMedicionScreen extends StatefulWidget {
   final Map<String, dynamic> medicion;
 
@@ -24,6 +28,8 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
     final String nombre = widget.medicion['nombre'] ?? 'Mídase la presión';
     final String detalle = widget.medicion['detalle'] ?? 'Instrumento';
 
+    // Asegura la inicialización del motor TTS antes de hablar
+    await _voiceService.init();
     // Frase personalizada y pausada ideal para accesibilidad
     await _voiceService.hablar("Atención. ¡Hora de tu alarma! Es momento de: $nombre. Por favor, utiliza el $detalle.");
   }
@@ -40,7 +46,7 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
     final String hora = widget.medicion['hora'] ?? '--:--';
     final String nombre = widget.medicion['nombre'] ?? 'MÍDASE LA PRESIÓN';
     final String detalle = widget.medicion['detalle'] ?? 'Instrumento';
-    final String? urlFoto = widget.medicion['url_foto_remedio']; // Reutilizamos el campo de imagen
+    final String? urlFoto = widget.medicion['url_foto_remedio'];
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFC5C5), // Fondo rosado exacto de la imagen de alarma
@@ -125,14 +131,24 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                 ),
               ),
 
-              // Botón Verde Inferior "YA LA MEDÍ"
+              // =========================================================
+              // MODIFICADO: BOTÓN VERDE "YA LA MEDÍ" CON PUSH TRADICIONAL
+              // =========================================================
               SizedBox(
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
                   onPressed: () {
-                    _voiceService.detener(); // Detiene el audio de la guía al confirmar
-                    Navigator.of(context).pop(); // Cierra la pantalla de alarma
+                    // 1. Apagamos la voz inmediatamente para que no siga hablando en la ventana del formulario
+                    _voiceService.detener();
+
+                    // 2. Hacemos un PUSH normal para apilar la pantalla del formulario sobre la de la alarma
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AddMeasurementPresionAfterAlarm(),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1AA23A), // Verde vibrante exacto de la imagen de alarma
