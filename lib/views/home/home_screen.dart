@@ -37,7 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
     vm.cargar();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas(context);
+      // CORREGIDO: Dejamos los paréntesis vacíos porque ya no requiere el context local
+      Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas();
     });
 
     // Inicializamos las configuraciones del TTS
@@ -472,9 +473,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
-                              (item['detalle'] ?? '').isNotEmpty)
+                              ((item['dosis'] ?? item['detalle']) ?? '').isNotEmpty)
                             Text(
-                              (item['detalle'] as String).split(' — ').first,
+                              (item['dosis'] ?? item['detalle'] ?? '') as String,
                               style: const TextStyle(
                                 fontSize: 24,
                                 color: Color(0xFF000080),

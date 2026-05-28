@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// Importación exacta que tienes configurada en tu proyecto
+import '../semaforizacion/resultado_semaforizacion_screen.dart';
 
 class AddMeasurementPresionAfterAlarm extends StatefulWidget {
   const AddMeasurementPresionAfterAlarm({Key? key}) : super(key: key);
@@ -13,7 +15,6 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
 
   static const Color appNavBarColor = Color(0xFF000080);
   static const Color inputTextColor = Color(0xFF000080);
-
   static const Color primaryButtonColor = Color(0xFFFF8800);
 
   @override
@@ -22,11 +23,20 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
     super.dispose();
   }
 
+  /// Procesa el guardado y salta a la pantalla de semaforización
   void _guardarMedicion() {
     if (_formKey.currentState!.validate()) {
       print('Medición guardada: ${_valueController.text}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Medición guardada exitosamente')),
+
+      // 1. Obtenemos el texto plano ingresado por el usuario (Ej: "120/80")
+      String valorPresion = _valueController.text.trim();
+
+      // 2. Transición tradicional (Push) a la pantalla de semaforización pasándole el String
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResultadoMedicionScreen(presionString: valorPresion),
+        ),
       );
     }
   }
@@ -102,7 +112,7 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
 
-                      // Bordes normales y enfocados (Negros, grosor 4.0)
+                      // Bordes normales y enfocados
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.0),
                         borderSide: const BorderSide(color: Colors.black, width: 4.0),
@@ -116,7 +126,7 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                         borderSide: const BorderSide(color: Colors.black, width: 4.0),
                       ),
 
-                      // Bordes de error (Rojos, grosor 4.0)
+                      // Bordes de error
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.0),
                         borderSide: const BorderSide(color: Colors.red, width: 4.0),
@@ -185,7 +195,7 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                         side: const BorderSide(color: primaryButtonColor, width: 2),
                       ),
                     ),
-                    onPressed: _guardarMedicion,
+                    onPressed: _guardarMedicion, // Ejecuta la función modificada
                     child: const Text(
                       'Guardar',
                       style: TextStyle(
