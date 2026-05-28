@@ -389,9 +389,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
-                            (item['detalle'] ?? '').isNotEmpty)
+                            ((item['dosis'] ?? item['detalle']) ?? '').isNotEmpty)
                           Text(
-                            (item['detalle'] as String).split(' — ').first,
+                            (item['dosis'] ?? item['detalle'] ?? '') as String,
                             style: const TextStyle(
                               fontSize: 24,
                               color: Color(0xFF000080),
