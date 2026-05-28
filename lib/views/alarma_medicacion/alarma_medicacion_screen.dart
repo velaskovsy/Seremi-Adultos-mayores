@@ -32,24 +32,25 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   void _reproducirAlarmaPorVoz() {
-    final String nombre = widget.medicamento['nombre'] ?? 'Medicamento';
-    final String detalle = widget.medicamento['detalle'] ?? '';
+    final String nombre        = widget.medicamento['nombre']        ?? 'Medicamento';
+    final String dosis         = widget.medicamento['dosis'] ?? '';
+    final String instrucciones = widget.medicamento['instrucciones'] ?? '';
 
     String mensaje = "Atención. Es hora de tomar tu medicamento: $nombre. ";
-    if (detalle.trim().isNotEmpty) {
-      mensaje += "Detalle e indicaciones: $detalle.";
-    }
+    if (dosis.trim().isNotEmpty)         mensaje += "Dosis: $dosis. ";
+    if (instrucciones.trim().isNotEmpty) mensaje += "Instrucciones: $instrucciones.";
 
     _voiceService.hablar(mensaje);
   }
 
   @override
   Widget build(BuildContext context) {
-    final String hora = widget.medicamento['hora'] ?? '--:--';
-    final String nombre = widget.medicamento['nombre'] ?? 'Medicamento';
-    final String detalle = widget.medicamento['detalle'] ?? '';
-    final String? urlCaja = widget.medicamento['url_foto_caja'];
-    final String? urlRemedio = widget.medicamento['url_foto_remedio'];
+    final String hora          = widget.medicamento['hora']          ?? '--:--';
+    final String nombre        = widget.medicamento['nombre']        ?? 'Medicamento';
+    final String dosis         = widget.medicamento['dosis'] ?? '';
+    final String instrucciones = widget.medicamento['instrucciones'] ?? '';
+    final String? urlCaja      = widget.medicamento['url_foto_caja'];
+    final String? urlRemedio   = widget.medicamento['url_foto_remedio'];
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFC5C5), // Fondo rosado
@@ -98,17 +99,26 @@ class _AlarmScreenState extends State<AlarmScreen> {
                         style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFCEE0FF),
-                          borderRadius: BorderRadius.circular(20),
+                      if (dosis.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCEE0FF),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            dosis,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D1B3E)),
+                          ),
                         ),
-                        child: Text(
-                          detalle,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D1B3E)),
+                      if (instrucciones.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          instrucciones,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16, color: Color(0xFF444444)),
                         ),
-                      ),
+                      ],
                       const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
