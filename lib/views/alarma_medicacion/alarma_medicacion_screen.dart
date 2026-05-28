@@ -111,14 +111,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D1B3E)),
                           ),
                         ),
-                      if (instrucciones.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          instrucciones,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16, color: Color(0xFF444444)),
-                        ),
-                      ],
                       const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
