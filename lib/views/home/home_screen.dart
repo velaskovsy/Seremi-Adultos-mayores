@@ -312,39 +312,108 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecordatorio(Map<String, dynamic> item) {
-    Color color;
+    Color colorBorde;
+    Color colorRelleno;
     switch (item['color']) {
-      case 'verde': color = Colors.green; break;
-      case 'rojo': color = Colors.red; break;
-      case 'morado': color = Colors.purple; break;
-      case 'azul': color = Colors.blue; break;
-      default: color = Colors.white;
+      case 'verde':
+        colorBorde = const Color(0xFF18A528);
+        colorRelleno = const Color(0xFFDEFFE1);
+        break;
+      case 'morado':
+        colorBorde = const Color(0xFFB200FF);
+        colorRelleno = const Color(0xFFEACFFF);
+        break;
+      case 'rojo':
+        colorBorde = const Color(0xFFFF0505);
+        colorRelleno = const Color(0xFFFFDFDF);
+        break;
+      case 'azul':
+        colorBorde = const Color(0xFF59BDFF);
+        colorRelleno = const Color(0xFFCDE3FF);
+        break;
+      default:
+        colorBorde = Colors.grey;
+        colorRelleno = const Color(0xFFE0E0E0);
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color, width: 2),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(width: 12, height: 60, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10))),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item['nombre'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(item['detalle'] ?? '', style: const TextStyle(fontSize: 16, color: Colors.black87)),
-              ],
+
+          // Hora a la izquierda
+          SizedBox(
+            width: 100,
+            child: Text(
+              item['hora'] ?? '',
+              style: const TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Text(item['hora'] ?? '', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+
+          const SizedBox(width: 8),
+
+          // Tarjeta
+          Expanded(
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 90),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: colorRelleno,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colorBorde, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    offset: const Offset(0, 4),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['nombre'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
+                            (item['detalle'] ?? '').isNotEmpty)
+                          Text(
+                            (item['detalle'] as String).split(' — ').first,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              color: Color(0xFF000080),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Icon(
+                      Icons.volume_up,
+                      color: Colors.black,
+                      size: 46,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
