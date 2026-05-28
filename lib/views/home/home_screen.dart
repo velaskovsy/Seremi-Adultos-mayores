@@ -1,14 +1,17 @@
 // lib/views/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_tts/flutter_tts.dart'; // 1. IMPORTAMOS EL TTS
 
 import '../../core/widgets/app_footer.dart';
 import '../../services/auth_service.dart';
 import '../../viewmodels/home_viewmodel.dart';
-import '../../viewmodels/alarma_medicacion_viewmodel.dart'; // Importación del ViewModel de alarmas
+import '../../viewmodels/alarma_medicacion_viewmodel.dart';
 
 import '../login/login_screen.dart';
 import '../reminder/add_reminder_screen.dart';
+import '../editar o eliminar recordatorio/detalle_medicamento_screen.dart'; // Ajusta la ruta a donde la hayas guardado
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -20,6 +23,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late HomeViewModel vm;
 
+  // 2. INSTANCIAMOS EL MOTOR TTS
+  final FlutterTts flutterTts = FlutterTts();
+
   @override
   void initState() {
     super.initState();
@@ -30,10 +36,19 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     vm.cargar();
 
-    // Activamos el motor de alarmas apenas la pantalla se termina de renderizar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas(context);
     });
+
+    // Inicializamos las configuraciones del TTS
+    _initTts();
+  }
+
+  // 3. CONFIGURAMOS EL TTS (Idioma y Velocidad)
+  Future<void> _initTts() async {
+    await flutterTts.setLanguage("es-ES"); // Español
+    await flutterTts.setSpeechRate(0.45); // Velocidad ligeramente más lenta para el adulto mayor
+    await flutterTts.setPitch(1.0);
   }
 
   @override
@@ -43,10 +58,60 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       debugPrint("No se pudo detener el monitoreo: $e");
     }
+    flutterTts.stop(); // Detenemos el audio si se sale de la pantalla
     super.dispose();
   }
 
-  // Generador de fecha dinámica en español
+  // 4. LÓGICA PARA LEER LA TARJETA
+  Future<void> _reproducirTTS(Map<String, dynamic> item) async {
+    String nombre = item['nombre'] ?? '';
+    String detalle = '';
+
+    if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
+        (item['detalle'] ?? '').isNotEmpty) {
+      detalle = (item['detalle'] as String).split(' — ').first;
+    }
+
+    String horaStr = item['hora'] ?? '';
+    String horaHablada = _formatearHoraParaTTS(horaStr);
+
+    // Construimos la frase final: "Paracetamol, 1 pastilla, a la una y quince de la tarde"
+    String textoALeer = "$nombre. ";
+    if (detalle.isNotEmpty) {
+      textoALeer += "$detalle. ";
+    }
+    if (horaHablada.isNotEmpty) {
+      textoALeer += horaHablada;
+    }
+
+    await flutterTts.speak(textoALeer);
+  }
+
+  // 5. TRADUCTOR DE HORA (De "13:15" a lenguaje natural)
+  String _formatearHoraParaTTS(String horaStr) {
+    if (horaStr.isEmpty || !horaStr.contains(':')) return "";
+
+    List<String> partes = horaStr.split(':');
+    int hora = int.tryParse(partes[0]) ?? 0;
+    int minuto = int.tryParse(partes[1]) ?? 0;
+
+    String periodo = "de la mañana";
+    if (hora >= 12 && hora < 20) {
+      periodo = "de la tarde";
+    } else if (hora >= 20 || hora < 6) {
+      periodo = "de la noche";
+    }
+
+    int hora12 = hora % 12;
+    if (hora12 == 0) hora12 = 12;
+
+    String articulo = hora12 == 1 ? "a la" : "a las";
+    String horaTexto = hora12.toString();
+    String minutoTexto = minuto == 0 ? "en punto" : "y $minuto";
+
+    return "$articulo $horaTexto $minutoTexto $periodo";
+  }
+
   String _obtenerFecha() {
     final ahora = DateTime.now();
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -58,8 +123,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _handleLogout(BuildContext context) async {
     final authService = AuthService();
 
-    // Apagamos el timer antes de salir
     Provider.of<AlarmViewModel>(context, listen: false).detenerMonitoreo();
+    await flutterTts.stop();
     await authService.logout();
 
     if (context.mounted) {
@@ -148,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 20),
 
-                  // 🔥 BOTÓN AÑADIR RECORDATORIO (CORREGIDO SIN EL CONST ERRÓNEO)
+                  // BOTÓN AÑADIR RECORDATORIO
                   Center(
                     child: Container(
                       decoration: BoxDecoration(
@@ -173,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const AddReminderScreen(), // Queda limpio aquí
+                                builder: (_) => const AddReminderScreen(),
                               ),
                             );
                           },
@@ -225,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     titulo: 'MAÑANA',
                     tituloColor: Colors.orange,
                     vacio: manana.isEmpty,
-                    imagenVacio: 'assets/imagenes/manana.jpg', // Path corregido sin "ñ"
+                    imagenVacio: 'assets/imagenes/manana.jpg',
                     mensajeVacio: 'No hay eventos\nprogramados',
                     tarjetas: manana.map<Widget>((item) => _buildRecordatorio(item)).toList(),
                   ),
@@ -356,60 +421,83 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(width: 8),
 
-          // Tarjeta
+          // Tarjeta Clickeable
           Expanded(
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 90),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: colorRelleno,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colorBorde, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    offset: const Offset(0, 4),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['nombre'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
-                            (item['detalle'] ?? '').isNotEmpty)
+            // 👇 1. ENVOLVEMOS EL CONTAINER CON GESTURE DETECTOR 👇
+            child: GestureDetector(
+              onTap: () {
+                // 👇 2. LÓGICA DE NAVEGACIÓN 👇
+                if (item['tipo'] == 'medicamento') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      // Pasamos el 'item' completo a la nueva pantalla
+                      builder: (_) => DetalleMedicamentoScreen(medicamento: item),
+                    ),
+                  );
+                } else {
+                  // Aquí tu equipo podrá agregar la navegación para las otras pantallas
+                  // ej: builder: (_) => DetalleActividadScreen(actividad: item)
+                  print('Tocado un evento de tipo: ${item['tipo']}');
+                }
+              },
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 90),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: colorRelleno,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colorBorde, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2), // Corrección recomendada para compatibilidad
+                      offset: const Offset(0, 4),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            (item['detalle'] as String).split(' — ').first,
+                            item['nombre'] ?? '',
                             style: const TextStyle(
-                              fontSize: 24,
-                              color: Color(0xFF000080),
+                              fontSize: 32,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
                           ),
-                      ],
+                          if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
+                              (item['detalle'] ?? '').isNotEmpty)
+                            Text(
+                              (item['detalle'] as String).split(' — ').first,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                color: Color(0xFF000080),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Icon(
-                      Icons.volume_up,
-                      color: Colors.black,
-                      size: 46,
+
+                    // El botón de TTS que configuramos antes
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: IconButton(
+                        icon: const Icon(Icons.volume_up, color: Colors.black),
+                        iconSize: 46,
+                        onPressed: () => _reproducirTTS(item),
+                        tooltip: 'Escuchar recordatorio',
+                      ),
                     ),
-                  ),
-                ],
+
+                  ],
+                ),
               ),
             ),
           ),

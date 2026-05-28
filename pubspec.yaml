@@ -26,7 +26,7 @@ dependencies:
   flutter_local_notifications: ^21.0.0
 
 dependency_overrides:
-  app_links: 6.3.2         # ← Ahora queda limpio y bien indentado
+  app_links: 6.1.1       # ← Ahora queda limpio y bien indentado
 
 dev_dependencies:
   flutter_test:
