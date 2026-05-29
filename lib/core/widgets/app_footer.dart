@@ -1,43 +1,96 @@
 import 'package:flutter/material.dart';
+import '../../views/calendario/calendario_screen.dart';
+import '../../views/home/home_screen.dart';
 
 class AppFooter extends StatelessWidget {
-  const AppFooter({Key? key}) : super(key: key);
+  final int paginaActual; // 0 = Hoy, 1 = Calendario
+
+  const AppFooter({Key? key, this.paginaActual = 0}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 128,
-      color: const Color(0xFF0000B0), // Azul oscuro del footer
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
+      color: const Color(0xFF0000B0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Ícono con fondo blanco redondeado
-          const SizedBox(height:10),
-          Container(
-            width: 40,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.checklist,
-              color: Color(0xFF0000B0),
-              size: 28,
-            ),
+
+          // ── HOY ──────────────────────────────────────────
+          _buildBoton(
+            context: context,
+            icono: Icons.checklist,
+            label: 'Hoy',
+            activo: paginaActual == 0,
+            onTap: () {
+              if (paginaActual != 0) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      (route) => false,
+                );
+              }
+            },
           ),
 
-          const SizedBox(height: 0),
+          // ── CALENDARIO ────────────────────────────────────
+          _buildBoton(
+            context: context,
+            icono: Icons.calendar_month,
+            label: 'Calendario',
+            activo: paginaActual == 1,
+            onTap: () {
+              if (paginaActual != 1) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CalendarioScreen()),
+                      (route) => false,
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
-          // Texto "Hoy"
-          const Text(
-            'Hoy',
+  Widget _buildBoton({
+    required BuildContext context,
+    required IconData icono,
+    required String label,
+    required bool activo,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: activo ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icono,
+              color: activo
+                  ? const Color(0xFF0000B0)
+                  : Colors.white.withValues(alpha: 0.7),
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
             style: TextStyle(
               fontFamily: 'Roboto',
-              fontSize: 20,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: activo ? Colors.white : Colors.white.withValues(alpha: 0.7),
+              fontWeight: activo ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ],
