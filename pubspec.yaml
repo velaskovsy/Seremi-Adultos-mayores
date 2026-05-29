@@ -24,9 +24,10 @@ dependencies:
   shared_preferences: ^2.3.2
   http: ^1.2.1
   flutter_local_notifications: ^21.0.0
+  table_calendar: ^3.1.2
 
 dependency_overrides:
-  app_links: 6.3.2         # ← Ahora queda limpio y bien indentado
+  app_links: 6.1.1       # ← Ahora queda limpio y bien indentado
 
 dev_dependencies:
   flutter_test:
