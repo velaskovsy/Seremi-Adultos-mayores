@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_appointment_viewmodel.dart';
+import 'package:seremi_adultos_mayores/viewmodels/alarma_presion_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_activity_viewmodel.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_measurement_viewmodel.dart';
@@ -39,8 +40,16 @@ void main() async {
   if (notificationDetails?.didNotificationLaunchApp ?? false) {
     final payload = notificationDetails?.notificationResponse?.payload;
     if (payload != null) {
-      final Map<String, dynamic> medicamentoDatos = jsonDecode(payload);
-      pantallaInicial = AlarmScreen(medicamento: medicamentoDatos);
+      final Map<String, dynamic> datosPayload = jsonDecode(payload);
+      //pantallaInicial = AlarmScreen(medicamento: medicamentoDatos);
+      // 👇 AQUÍ EVALUAMOS QUÉ TIPO DE NOTIFICACIÓN SE TOCÓ 👇
+      if (datosPayload['tipo'] == 'medicion_repeticion' || datosPayload['tipo'] == 'medicion') {
+        // Redirige a la pantalla de presión
+        pantallaInicial = AlarmaMedicionScreen(medicion: datosPayload);
+      } else {
+        // Si no es medición, asume que es medicamento normal
+        pantallaInicial = AlarmScreen(medicamento: datosPayload);
+      }
     }
   }
 

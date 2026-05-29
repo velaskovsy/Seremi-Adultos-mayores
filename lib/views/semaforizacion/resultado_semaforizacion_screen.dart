@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// 👇 IMPORTACIONES NECESARIAS 👇
+import '../../services/notificacion_service.dart';
+import '../../services/medicion_service.dart'; // Importamos el servicio directo
+import '../alarma_presion/alerta_critica_presion_alta.dart';
+import '../home/home_screen.dart';
 
 class ResultadoMedicionScreen extends StatelessWidget {
-  final String presionString; // Recibe el texto en formato "120/80" o "160/100"
+  final String presionString;
 
   const ResultadoMedicionScreen({Key? key, required this.presionString}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // 1. Separamos el String por la barra "/"
     List<String> partes = presionString.split('/');
-
-    // Convertimos a números enteros usando un tryParse por seguridad
     int sistolica = int.tryParse(partes[0].trim()) ?? 0;
     int diastolica = (partes.length > 1) ? (int.tryParse(partes[1].trim()) ?? 0) : 0;
 
-    // Variables que van a cambiar según el rango de presión
     Color backgroundColor;
     Color statusColor;
     IconData iconData;
@@ -22,29 +25,28 @@ class ResultadoMedicionScreen extends StatelessWidget {
     String mensaje;
     String textoBoton;
 
-    // 2. Evaluamos los rangos (Lógica basada en tu mockup)
-    // RANGO ROJO: Alerta Crítica (>= 200 sistólica o >= 150 diastólica)
+    bool esCritico = false;
+    bool esElevado = false;
+
     if (sistolica >= 200 || diastolica >= 150) {
-      backgroundColor = const Color(0xFFFFC5C5); // Rosado/Rojo suave
+      esCritico = true;
+      backgroundColor = const Color(0xFFFFC5C5);
       statusColor = Colors.red;
       iconData = Icons.error_outline;
       titulo = '¡ALERTA\nCRÍTICA!';
       mensaje = 'Siéntese y repose por 30 minutos. Evite tomar café o agitarse. Si no baja avise a su cuidador';
       textoBoton = 'REPETIR MEDICIÓN\nEN 30 MINUTOS';
-    }
-    // RANGO AMARILLO: Presión Elevada (>= 140 sistólica o >= 90 diastólica)
-    else if (sistolica >= 140 || diastolica >= 90) {
-      backgroundColor = const Color(0xFFFFF9C4); // Amarillo suave
-      statusColor = const Color(0xFFB71C1C); // Usamos rojo oscuro o naranjo para destacar
+    } else if (sistolica >= 140 || diastolica >= 90) {
+      esElevado = true;
+      backgroundColor = const Color(0xFFFFF9C4);
+      statusColor = const Color(0xFFB71C1C);
       iconData = Icons.warning_amber_rounded;
       titulo = 'PRESIÓN\nELEVADA';
       mensaje = 'Siéntese y repose por 30 minutos. Evite tomar café o agitarse. Si no baja avise a su cuidador';
       textoBoton = 'REPETIR MEDICIÓN\nEN 30 MINUTOS';
-    }
-    // RANGO VERDE: Todo Bien (Menor a 140/90)
-    else {
-      backgroundColor = const Color(0xFFC8E6C9); // Verde claro
-      statusColor = const Color(0xFF1AA23A); // Verde fuerte
+    } else {
+      backgroundColor = const Color(0xFFC8E6C9);
+      statusColor = const Color(0xFF1AA23A);
       iconData = Icons.check_circle_outline_rounded;
       titulo = 'TODO BIEN';
       mensaje = 'Su presión arterial está en niveles normales. Siga manteniendo sus hábitos saludables';
@@ -59,25 +61,14 @@ class ResultadoMedicionScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Parte superior: Icono y Estado
               Column(
                 children: [
                   const SizedBox(height: 20),
                   Icon(iconData, color: statusColor, size: 90),
                   const SizedBox(height: 10),
-                  Text(
-                    titulo,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text(titulo, textAlign: TextAlign.center, style: TextStyle(color: statusColor, fontSize: 32, fontWeight: FontWeight.bold)),
                 ],
               ),
-
-              // Tarjeta Blanca Central
               Card(
                 color: Colors.white,
                 elevation: 2,
@@ -87,62 +78,59 @@ class ResultadoMedicionScreen extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Óvalo celeste con la presión ingresada
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD2E3FC),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          '$presionString mmHg',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D1B3E),
-                          ),
-                        ),
+                        decoration: BoxDecoration(color: const Color(0xFFD2E3FC), borderRadius: BorderRadius.circular(30)),
+                        child: Text('$presionString mmHg', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0D1B3E))),
                       ),
                       const SizedBox(height: 20),
-                      // Mensaje explicativo
-                      Text(
-                        mensaje,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
-                          height: 1.4,
-                        ),
-                      ),
+                      Text(mensaje, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w500, color: Colors.black87, height: 1.4)),
                     ],
                   ),
                 ),
               ),
-
-              // Botón de acción inferior (Volver al Home)
               SizedBox(
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Limpia las pantallas intermedias y regresa al Home de forma limpia
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  onPressed: () async {
+                    try {
+                      if (esCritico || esElevado) {
+                        final int minutosEspera = 1; // Cambiar a 30 para producción
+                        final nuevaHora = DateTime.now().add(Duration(minutes: minutosEspera));
+                        final horaStr = '${nuevaHora.hour.toString().padLeft(2, '0')}:${nuevaHora.minute.toString().padLeft(2, '0')}';
+
+                        // 1. Notificación local (la alarma que suena)
+                        await NotificationService().programarRepeticionPresion({'hora_original': DateTime.now().toString()}, minutosEspera);
+
+                        // 2. Registro en Base de Datos (la tarjeta en el Home)
+                        final MedicionService service = MedicionService();
+                        await service.crearMedicion(
+                          tipoMedicion: 'Control de Presión (Repetición)',
+                          horas: [horaStr],
+                          fecha: DateTime.now(), // Se registra para hoy
+                          instrucciones: 'Repetir medición de presión.',
+                        );
+
+                        // 3. Navegación
+                        if (esCritico) {
+                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AlertaCriticaPresionAltaScreen(presionString: presionString)));
+                        } else {
+                          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+                        }
+                      } else {
+                        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+                      }
+                    } catch (e) {
+                      debugPrint('Error al procesar: $e');
+                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: (titulo == 'TODO BIEN') ? const Color(0xFF1AA23A) : Colors.orange,
+                    backgroundColor: (!esCritico && !esElevado) ? const Color(0xFF1AA23A) : (esCritico ? Colors.red : Colors.orange),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 3,
                   ),
-                  child: Text(
-                    textoBoton,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: Text(textoBoton, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ],

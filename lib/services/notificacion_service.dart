@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz; // Necesario para programar en el futuro
 
 class NotificationService {
   // Patrón Singleton para usar la misma instancia en toda la app
@@ -11,6 +13,12 @@ class NotificationService {
 
   /// Se ejecuta en el main.dart al abrir la app para registrar el plugin en Android
   Future<void> initNotification() async {
+
+    // 👇 AQUÍ ESTÁ "LA WEA" AGREGADA 👇
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('America/Santiago')); // Configura la hora exacta de Chile
+    // 👆 HASTA AQUÍ 👆
+
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -52,6 +60,42 @@ class NotificationService {
       body: 'Debes tomar: ${medicamento['nombre']}',
       notificationDetails: platformDetails,
       payload: jsonEncode(medicamento),
+    );
+  }
+
+  Future<void> programarRepeticionPresion(Map<String, dynamic> medicionAnterior, int minutos) async {
+    // 1. Preparamos los datos que viajarán ocultos en la notificación (Payload)
+    // Le ponemos tipo 'medicion_repeticion' para que el main.dart sepa cómo reaccionar
+    final payloadData = {
+      ...medicionAnterior,
+      'tipo': 'medicion_repeticion',
+      'nombre': 'Control de Presión (Repetición)',
+    };
+
+    const androidDetails = AndroidNotificationDetails(
+      'presion_repeticion_channel',
+      'Repetición Presión',
+      channelDescription: 'Recordatorio para repetir medición de presión',
+      importance: Importance.max,
+      priority: Priority.high,
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.alarm,
+      visibility: NotificationVisibility.public,
+    );
+
+    final platformDetails = const NotificationDetails(android: androidDetails);
+
+    // Calculamos la hora exacta
+    final horaProgramada = tz.TZDateTime.now(tz.local).add(Duration(minutes: minutos));
+
+    await _notificationsPlugin.zonedSchedule(
+      id: 999, // Nombre explícito agregado
+      title: '¡Hora de repetir la medición!', // Nombre explícito agregado
+      body: 'Han pasado $minutos minutos. Por favor mídase la presión nuevamente.', // Nombre explícito agregado
+      scheduledDate: horaProgramada, // Nombre explícito agregado
+      notificationDetails: platformDetails, // Nombre explícito agregado
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: jsonEncode(payloadData),
     );
   }
 }
