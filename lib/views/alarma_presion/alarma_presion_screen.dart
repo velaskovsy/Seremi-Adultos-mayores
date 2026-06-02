@@ -31,7 +31,7 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
     // Asegura la inicialización del motor TTS antes de hablar
     await _voiceService.init();
     // Frase personalizada y pausada ideal para accesibilidad
-    await _voiceService.hablar("Atención. ¡Hora de tu alarma! Es momento de: $nombre. Por favor, utiliza el $detalle.");
+    await _voiceService.hablar("Atención. ¡Hora de tu alarma! Es momento de: $nombre. Instrucciones $detalle.");
   }
 
   @override
@@ -132,27 +132,44 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
               ),
 
               // =========================================================
-              // MODIFICADO: BOTÓN VERDE "YA LA MEDÍ" CON PUSH TRADICIONAL
+              // BOTÓN VERDE CON ESCÁNER Y DETECCIÓN INTELIGENTE
               // =========================================================
               SizedBox(
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
                   onPressed: () {
-                    // 1. Apagamos la voz inmediatamente para que no siga hablando en la ventana del formulario
+                    // 1. ESCÁNER: Imprimimos en consola qué trae exactamente la notificación
+                    print('=====================================');
+                    print('🕵️‍♂️ DATOS DE LA NOTIFICACIÓN QUE TOCASTE:');
+                    print(widget.medicion);
+                    print('=====================================');
+
+                    // 2. DETECCIÓN INTELIGENTE: En vez de exigir texto exacto, buscamos la palabra "repeticion"
+                    String tipoRecibido = widget.medicion['tipo']?.toString().toLowerCase() ?? '';
+                    String detalleRecibido = widget.medicion['detalle']?.toString().toLowerCase() ?? '';
+                    String nombreRecibido = widget.medicion['nombre']?.toString().toLowerCase() ?? '';
+
+                    // 👇 AQUÍ SE PEGABA ESE CÓDIGO 👇
+                    bool esRep = tipoRecibido.contains('repetic') ||
+                        detalleRecibido.contains('repetic') ||
+                        nombreRecibido.contains('repetic');
+
                     _voiceService.detener();
 
-                    // 2. Hacemos un PUSH normal para apilar la pantalla del formulario sobre la de la alarma
-                    Navigator.push(
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const AddMeasurementPresionAfterAlarm(),
+                        builder: (_) => AddMeasurementPresionAfterAlarm(
+                          // 👇 Usamos nuestra nueva variable inteligente 👇
+                          esRepeticion: esRep,
+                        ),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1AA23A), // Verde vibrante exacto de la imagen de alarma
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Botón redondeado
+                    backgroundColor: const Color(0xFF1AA23A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 3,
                   ),
                   child: const Text(
