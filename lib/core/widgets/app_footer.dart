@@ -67,20 +67,21 @@ class AppFooter extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 10),
+          const SizedBox(height: 0),
           Container(
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: activo ? Colors.white : Colors.transparent,
+              color: activo ? Colors.white : Colors.white.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icono,
+
               color: activo
                   ? const Color(0xFF0000B0)
                   : Colors.white.withValues(alpha: 0.7),
-              size: 32,
+                size: activo ? 36 : 28,
             ),
           ),
           const SizedBox(height: 4),

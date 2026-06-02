@@ -31,15 +31,13 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   // Rango: primer día del mes anterior → último día del mes siguiente
-  // Cubre los días del mes anterior/siguiente visibles en los bordes del calendario
-  // y permite al usuario cambiar de mes sin un nuevo request inmediato
   (DateTime, DateTime) _rangoParaMes(DateTime mes) {
     final desde = DateTime(mes.year, mes.month - 1, 1);
-    final hasta  = DateTime(mes.year, mes.month + 2, 0); // día 0 = último día del mes anterior
+    final hasta  = DateTime(mes.year, mes.month + 2, 0);
     return (desde, hasta);
   }
 
-  // ── Carga de puntitos ─────────────────────────────────────────
+  // ── Carga de puntitos (Lógica del amigo) ──────────────────────
 
   Future<void> _cargarPuntitos(DateTime mes) async {
     setState(() => _cargandoCalendario = true);
@@ -53,7 +51,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     });
   }
 
-  // ── Carga del detalle del día seleccionado ────────────────────
+  // ── Carga del detalle del día seleccionado (Lógica del amigo) ─
 
   Future<void> _cargarDia(DateTime dia) async {
     setState(() {
@@ -90,8 +88,6 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
   }
 
   // ── EventLoader para el TableCalendar ─────────────────────────
-  // Retorna lista no vacía si el día tiene eventos (así aparece el puntito)
-
   List<Object> _eventLoader(DateTime dia) {
     return _diasConEventos.contains(_formatearFecha(dia)) ? [true] : [];
   }
@@ -150,104 +146,105 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             child: Column(
               children: [
 
-                // ── CALENDARIO ──────────────────────────────
+                // ── CALENDARIO (Con tus estilos estéticos) ─────────
                 _cargandoCalendario
                     ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: LinearProgressIndicator(color: Color(0xFF000080)),
-                      )
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: LinearProgressIndicator(color: Color(0xFF000080)),
+                )
                     : TableCalendar(
-                        locale: 'es_ES',
-                        firstDay: DateTime(2024),
-                        lastDay: DateTime(2027),
-                        focusedDay: _diaFocuseado,
-                        selectedDayPredicate: (dia) =>
-                            isSameDay(_diaSeleccionado, dia),
-                        eventLoader: _eventLoader,
+                  locale: 'es_ES',
+                  firstDay: DateTime(2024),
+                  lastDay: DateTime(2027),
+                  focusedDay: _diaFocuseado,
+                  selectedDayPredicate: (dia) =>
+                      isSameDay(_diaSeleccionado, dia),
+                  eventLoader: _eventLoader,
 
-                        // Cuando cambia el mes → recargar puntitos
-                        onPageChanged: (nuevaFecha) {
-                          _diaFocuseado = nuevaFecha;
-                          _cargarPuntitos(nuevaFecha);
-                        },
+                  // Cuando cambia el mes → recargar puntitos
+                  onPageChanged: (nuevaFecha) {
+                    _diaFocuseado = nuevaFecha;
+                    _cargarPuntitos(nuevaFecha);
+                  },
 
-                        // Cuando toca un día → cargar detalle
-                        onDaySelected: (seleccionado, focuseado) {
-                          setState(() {
-                            _diaSeleccionado = seleccionado;
-                            _diaFocuseado    = focuseado;
-                          });
-                          _cargarDia(seleccionado);
-                        },
+                  // Cuando toca un día → cargar detalle
+                  onDaySelected: (seleccionado, focuseado) {
+                    setState(() {
+                      _diaSeleccionado = seleccionado;
+                      _diaFocuseado    = focuseado;
+                    });
+                    _cargarDia(seleccionado);
+                  },
 
-                        calendarStyle: CalendarStyle(
-                          selectedDecoration: const BoxDecoration(
-                            color: Color(0xFF000080),
-                            shape: BoxShape.circle,
-                          ),
-                          selectedTextStyle: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          todayDecoration: BoxDecoration(
-                            color: const Color(0xFF000080).withValues(alpha: 0.3),
-                            shape: BoxShape.circle,
-                          ),
-                          todayTextStyle: const TextStyle(
-                            color: Color(0xFF000080),
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          defaultTextStyle: const TextStyle(fontSize: 20),
-                          weekendTextStyle: const TextStyle(
-                            fontSize: 20,
-                            color: Colors.black54,
-                          ),
-                          outsideTextStyle: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                          ),
-                          markerDecoration: const BoxDecoration(
-                            color: Color(0xFFFF8800),
-                            shape: BoxShape.circle,
-                          ),
-                          markerSize: 10,
-                          markersMaxCount: 3,
-                          cellMargin: const EdgeInsets.all(6),
-                        ),
-                        headerStyle: const HeaderStyle(
-                          formatButtonVisible: false,
-                          titleCentered: true,
-                          titleTextStyle: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF000080),
-                          ),
-                          leftChevronIcon: Icon(
-                            Icons.chevron_left,
-                            color: Color(0xFF000080),
-                            size: 32,
-                          ),
-                          rightChevronIcon: Icon(
-                            Icons.chevron_right,
-                            color: Color(0xFF000080),
-                            size: 32,
-                          ),
-                        ),
-                        daysOfWeekStyle: const DaysOfWeekStyle(
-                          weekdayStyle: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF000080),
-                          ),
-                          weekendStyle: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ),
+                  // TUS ESTILOS ESTÉTICOS APLICADOS AQUÍ 👇
+                  calendarStyle: CalendarStyle(
+                    selectedDecoration: const BoxDecoration(
+                      color: Color(0xFF000080),
+                      shape: BoxShape.circle,
+                    ),
+                    selectedTextStyle: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: const Color(0xFF000080).withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    todayTextStyle: const TextStyle(
+                      color: Color(0xFF000080),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    defaultTextStyle: const TextStyle(fontSize: 20),
+                    weekendTextStyle: const TextStyle(
+                      fontSize: 20,
+                      color: Colors.black54,
+                    ),
+                    outsideTextStyle: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey,
+                    ),
+                    markerDecoration: const BoxDecoration(
+                      color: Color(0xFFFF8800),
+                      shape: BoxShape.circle,
+                    ),
+                    markerSize: 10,
+                    markersMaxCount: 3,
+                    cellMargin: const EdgeInsets.all(6),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF000080),
+                    ),
+                    leftChevronIcon: Icon(
+                      Icons.chevron_left,
+                      color: Color(0xFF000080),
+                      size: 32,
+                    ),
+                    rightChevronIcon: Icon(
+                      Icons.chevron_right,
+                      color: Color(0xFF000080),
+                      size: 32,
+                    ),
+                  ),
+                  daysOfWeekStyle: const DaysOfWeekStyle(
+                    weekdayStyle: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF000080),
+                    ),
+                    weekendStyle: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
 
                 const Divider(color: Colors.black26, thickness: 1),
 
@@ -255,113 +252,113 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 Expanded(
                   child: _cargandoDia
                       ? const Center(
-                          child: CircularProgressIndicator(
-                              color: Color(0xFF000080)),
-                        )
+                    child: CircularProgressIndicator(
+                        color: Color(0xFF000080)),
+                  )
                       : _eventosDelDiaSeleccionado.isEmpty
-                          ? const Center(
+                      ? const Center(
+                    child: Text(
+                      'No hay eventos\nprogramados',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  )
+                      : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 17, vertical: 8),
+                    itemCount: _eventosDelDiaSeleccionado.length,
+                    itemBuilder: (context, index) {
+                      final item = _eventosDelDiaSeleccionado[index];
+                      final colorRelleno =
+                      _parsearColor(item['color'] ?? '');
+                      final colorBorde =
+                      _parsearBorde(item['color'] ?? '');
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 60,
                               child: Text(
-                                'No hay eventos\nprogramados',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  color: Colors.black54,
+                                item['hora'] ?? '',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 17, vertical: 8),
-                              itemCount: _eventosDelDiaSeleccionado.length,
-                              itemBuilder: (context, index) {
-                                final item = _eventosDelDiaSeleccionado[index];
-                                final colorRelleno =
-                                    _parsearColor(item['color'] ?? '');
-                                final colorBorde =
-                                    _parsearBorde(item['color'] ?? '');
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(
-                                          item['hora'] ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 12),
-                                          decoration: BoxDecoration(
-                                            color: colorRelleno,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            border: Border.all(
-                                                color: colorBorde, width: 2),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black
-                                                    .withValues(alpha: 0.1),
-                                                offset: const Offset(0, 3),
-                                                blurRadius: 5,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      item['nombre'] ?? '',
-                                                      style: const TextStyle(
-                                                        fontSize: 20,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    if ((item['tipo'] ==
-                                                                'medicamento' ||
-                                                            item['tipo'] ==
-                                                                'actividad') &&
-                                                        (item['detalle'] ?? '')
-                                                            .isNotEmpty)
-                                                      Text(
-                                                        (item['detalle']
-                                                                as String)
-                                                            .split(' — ')
-                                                            .first,
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Icon(Icons.volume_up,
-                                                  color: Colors.black54,
-                                                  size: 28),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
                             ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: colorRelleno,
+                                  borderRadius:
+                                  BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: colorBorde, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black
+                                          .withValues(alpha: 0.1),
+                                      offset: const Offset(0, 3),
+                                      blurRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item['nombre'] ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight:
+                                              FontWeight.bold,
+                                            ),
+                                          ),
+                                          if ((item['tipo'] ==
+                                              'medicamento' ||
+                                              item['tipo'] ==
+                                                  'actividad') &&
+                                              (item['detalle'] ?? '')
+                                                  .isNotEmpty)
+                                            Text(
+                                              (item['detalle']
+                                              as String)
+                                                  .split(' — ')
+                                                  .first,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.volume_up,
+                                        color: Colors.black54,
+                                        size: 28),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

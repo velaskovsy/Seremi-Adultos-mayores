@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 // Importación exacta que tienes configurada en tu proyecto
 import '../semaforizacion/resultado_semaforizacion_screen.dart';
+import '../alarma_presion/alerta_critica_presion_alta.dart';
 
 class AddMeasurementPresionAfterAlarm extends StatefulWidget {
-  const AddMeasurementPresionAfterAlarm({Key? key}) : super(key: key);
+  final bool esRepeticion;
+  // 👇 1. NUEVO: Recibimos las instrucciones originales para pasarlas al Semáforo
+  final String instruccionesOriginales;
+
+  const AddMeasurementPresionAfterAlarm({
+    Key? key,
+    this.esRepeticion = false,
+    // Texto por defecto por si entra normal
+    this.instruccionesOriginales = 'Use su tensiómetro habitual para medir la presión.',
+  }) : super(key: key);
 
   @override
   _AddMeasurementPresionAfterAlarmState createState() => _AddMeasurementPresionAfterAlarmState();
@@ -23,21 +33,46 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
     super.dispose();
   }
 
-  /// Procesa el guardado y salta a la pantalla de semaforización
+  /// Procesa el guardado y evalúa si saltar directo a emergencias
   void _guardarMedicion() {
     if (_formKey.currentState!.validate()) {
       print('Medición guardada: ${_valueController.text}');
 
-      // 1. Obtenemos el texto plano ingresado por el usuario (Ej: "120/80")
       String valorPresion = _valueController.text.trim();
 
-      // 2. Transición tradicional (Push) a la pantalla de semaforización pasándole el String
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResultadoMedicionScreen(presionString: valorPresion),
-        ),
-      );
+      // 👇 2. EVALUACIÓN Y ATAJO A EMERGENCIAS 👇
+      List<String> partes = valorPresion.split('/');
+      int sistolica = int.tryParse(partes[0].trim()) ?? 0;
+      int diastolica = (partes.length > 1) ? (int.tryParse(partes[1].trim()) ?? 0) : 0;
+
+      // Determinamos si los números son de nivel Elevado o Crítico
+      bool esAlta = (sistolica >= 140 || diastolica >= 90);
+
+      if (widget.esRepeticion && esAlta) {
+        // ATAJO DIRECTO: Es la repetición y la presión sigue alta.
+        // ¡Saltamos el Semáforo rojo y vamos directo a la emergencia!
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AlertaCriticaPresionAltaScreen(
+              presionString: valorPresion,
+            ),
+          ),
+        );
+      } else {
+        // FLUJO NORMAL: Es la primera vez, o es la repetición pero ya le salió Normal (verde)
+        // Lo enviamos a la pantalla de Semaforización.
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultadoMedicionScreen(
+              presionString: valorPresion,
+              esRepeticion: widget.esRepeticion,
+              instruccionesOriginales: widget.instruccionesOriginales, // Pasamos el bastón
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -112,7 +147,6 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
 
-                      // Bordes normales y enfocados
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.0),
                         borderSide: const BorderSide(color: Colors.black, width: 4.0),
@@ -125,8 +159,6 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                         borderRadius: BorderRadius.circular(12.0),
                         borderSide: const BorderSide(color: Colors.black, width: 4.0),
                       ),
-
-                      // Bordes de error
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.0),
                         borderSide: const BorderSide(color: Colors.red, width: 4.0),
@@ -195,7 +227,7 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                         side: const BorderSide(color: primaryButtonColor, width: 2),
                       ),
                     ),
-                    onPressed: _guardarMedicion, // Ejecuta la función modificada
+                    onPressed: _guardarMedicion,
                     child: const Text(
                       'Guardar',
                       style: TextStyle(

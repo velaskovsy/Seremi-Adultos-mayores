@@ -9,8 +9,13 @@ import '../home/home_screen.dart';
 
 class ResultadoMedicionScreen extends StatelessWidget {
   final String presionString;
+  final bool esRepeticion; // <--- 1. NUEVO PARÁMETRO PARA EL PROTOCOLO MÉDICO
 
-  const ResultadoMedicionScreen({Key? key, required this.presionString}) : super(key: key);
+  const ResultadoMedicionScreen({
+    Key? key,
+    required this.presionString,
+    this.esRepeticion = false, required String instruccionesOriginales, // <--- 2. POR DEFECTO ES FALSO (Primera medición)
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +40,8 @@ class ResultadoMedicionScreen extends StatelessWidget {
       iconData = Icons.error_outline;
       titulo = '¡ALERTA\nCRÍTICA!';
       mensaje = 'Siéntese y repose por 30 minutos. Evite tomar café o agitarse. Si no baja avise a su cuidador';
-      textoBoton = 'REPETIR MEDICIÓN\nEN 30 MINUTOS';
+      // Si ya reposó, el botón cambia de texto para tener sentido
+      textoBoton = esRepeticion ? 'VER OPCIONES DE EMERGENCIA' : 'REPETIR MEDICIÓN\nEN 30 MINUTOS';
     } else if (sistolica >= 140 || diastolica >= 90) {
       esElevado = true;
       backgroundColor = const Color(0xFFFFF9C4);
@@ -43,7 +49,7 @@ class ResultadoMedicionScreen extends StatelessWidget {
       iconData = Icons.warning_amber_rounded;
       titulo = 'PRESIÓN\nELEVADA';
       mensaje = 'Siéntese y repose por 30 minutos. Evite tomar café o agitarse. Si no baja avise a su cuidador';
-      textoBoton = 'REPETIR MEDICIÓN\nEN 30 MINUTOS';
+      textoBoton = esRepeticion ? 'VER OPCIONES DE EMERGENCIA' : 'REPETIR MEDICIÓN\nEN 30 MINUTOS';
     } else {
       backgroundColor = const Color(0xFFC8E6C9);
       statusColor = const Color(0xFF1AA23A);
@@ -96,29 +102,52 @@ class ResultadoMedicionScreen extends StatelessWidget {
                   onPressed: () async {
                     try {
                       if (esCritico || esElevado) {
-                        final int minutosEspera = 1; // Cambiar a 30 para producción
-                        final nuevaHora = DateTime.now().add(Duration(minutes: minutosEspera));
-                        final horaStr = '${nuevaHora.hour.toString().padLeft(2, '0')}:${nuevaHora.minute.toString().padLeft(2, '0')}';
 
-                        // 1. Notificación local (la alarma que suena)
-                        await NotificationService().programarRepeticionPresion({'hora_original': DateTime.now().toString()}, minutosEspera);
-
-                        // 2. Registro en Base de Datos (la tarjeta en el Home)
-                        final MedicionService service = MedicionService();
-                        await service.crearMedicion(
-                          tipoMedicion: 'Control de Presión (Repetición)',
-                          horas: [horaStr],
-                          fecha: DateTime.now(), // Se registra para hoy
-                          instrucciones: 'Repetir medición de presión.',
-                        );
-
-                        // 3. Navegación
-                        if (esCritico) {
-                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AlertaCriticaPresionAltaScreen(presionString: presionString)));
+                        // 👇 3. AQUÍ ESTÁ LA LÓGICA DE LA ENFERMERA 👇
+                        if (esRepeticion) {
+                          // Ya reposó y sigue alto: ¡A EMERGENCIAS!
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AlertaCriticaPresionAltaScreen(
+                                presionString: presionString,
+                              ),
+                            ),
+                          );
                         } else {
-                          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+                          // Es la primera vez que sale alto: PROGRAMAR ALARMA Y AL HOME
+                          final int minutosEspera = 1; // Cambiar a 30 para producción
+                          final nuevaHora = DateTime.now().add(Duration(minutes: minutosEspera));
+                          final horaStr = '${nuevaHora.hour.toString().padLeft(2, '0')}:${nuevaHora.minute.toString().padLeft(2, '0')}';
+
+                          // 1. Notificación local (la alarma que suena)
+                          await NotificationService().programarRepeticionPresion({
+                            'hora_original': DateTime.now().toString(),
+                              'tipo': 'medicion_repeticion',
+                              'nombre': 'Control de Presión',
+                              'detalle': 'Segunda medición',
+                              },
+                              minutosEspera
+                          );
+
+                          // 2. Registro en Base de Datos (la tarjeta en el Home)
+                          final MedicionService service = MedicionService();
+                          await service.crearMedicion(
+                            tipoMedicion: 'Presión arterial (Repetición)', // <--- Nombre corregido
+                            horas: [horaStr],
+                            fecha: DateTime.now(),
+                            instrucciones: 'Recordatorio automático de repetición',
+                          );
+
+                          // 3. Navegación al Home para descansar
+                          Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const HomeScreen()),
+                                  (route) => false
+                          );
                         }
                       } else {
+                        // VERDE: Todo bien, al Home
                         Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
                       }
                     } catch (e) {

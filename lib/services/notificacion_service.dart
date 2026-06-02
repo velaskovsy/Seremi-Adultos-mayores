@@ -1,7 +1,15 @@
 import 'dart:convert';
+import 'package:flutter/material.dart'; // Necesario para MaterialPageRoute
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz; // Necesario para programar en el futuro
+
+// 👇 IMPORTACIONES NECESARIAS PARA LA NAVEGACIÓN 👇
+import '../main.dart'; // Para acceder a navigatorKey
+import '../viewmodels/alarma_presion_viewmodel.dart' hide AlarmaMedicionScreen;
+import '../views/alarma_medicacion/alarma_medicacion_screen.dart'; // Para AlarmScreen
+// ⚠️ Verifica que esta ruta coincida con la ubicación real de tu archivo:
+import '../views/alarma_presion/alarma_presion_screen.dart' show AlarmaMedicionScreen;
 
 class NotificationService {
   // Patrón Singleton para usar la misma instancia en toda la app
@@ -14,10 +22,9 @@ class NotificationService {
   /// Se ejecuta en el main.dart al abrir la app para registrar el plugin en Android
   Future<void> initNotification() async {
 
-    // 👇 AQUÍ ESTÁ "LA WEA" AGREGADA 👇
+    // Configura la hora exacta de Chile
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('America/Santiago')); // Configura la hora exacta de Chile
-    // 👆 HASTA AQUÍ 👆
+    tz.setLocalLocation(tz.getLocation('America/Santiago'));
 
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -26,9 +33,35 @@ class NotificationService {
       android: initializationSettingsAndroid,
     );
 
-    // SOLUCIÓN AQUÍ: Se agrega el parámetro nombrado 'settings:'
+    // 👇 SOLUCIÓN AQUÍ: Atrapamos el clic cuando la app está abierta 👇
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        final String? payload = response.payload;
+
+        if (payload != null) {
+          final Map<String, dynamic> datosPayload = jsonDecode(payload);
+
+          // Evaluamos si el mensaje oculto dice que es repetición o presión
+          if (datosPayload['tipo'] == 'medicion_repeticion' || datosPayload['tipo'] == 'medicion') {
+
+            // Usamos la llave global del main.dart para forzar el viaje a la pantalla
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => AlarmaMedicionScreen(medicion: datosPayload),
+              ),
+            );
+
+          } else {
+            // Si es un remedio normal
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => AlarmScreen(medicamento: datosPayload),
+              ),
+            );
+          }
+        }
+      },
     );
   }
 
