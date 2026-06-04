@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/voice_service.dart'; // Importa tu servicio de voz
+import '../../services/notificacion_service.dart';
 
 // ⚠️ IMPORTACIÓN DE TU PANTALLA DE REGISTRO DE PRESIÓN POST-ALARMA
 // Ajusta la ruta exacta según dónde tengas guardado este archivo
@@ -138,30 +139,34 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
-                  onPressed: () {
+                  // 👇 A. LE AGREGAMOS LA PALABRA "async" AQUÍ 👇
+                  onPressed: () async {
                     // 1. ESCÁNER: Imprimimos en consola qué trae exactamente la notificación
                     print('=====================================');
                     print('🕵️‍♂️ DATOS DE LA NOTIFICACIÓN QUE TOCASTE:');
                     print(widget.medicion);
                     print('=====================================');
 
-                    // 2. DETECCIÓN INTELIGENTE: En vez de exigir texto exacto, buscamos la palabra "repeticion"
+                    // 2. DETECCIÓN INTELIGENTE:
                     String tipoRecibido = widget.medicion['tipo']?.toString().toLowerCase() ?? '';
                     String detalleRecibido = widget.medicion['detalle']?.toString().toLowerCase() ?? '';
                     String nombreRecibido = widget.medicion['nombre']?.toString().toLowerCase() ?? '';
 
-                    // 👇 AQUÍ SE PEGABA ESE CÓDIGO 👇
                     bool esRep = tipoRecibido.contains('repetic') ||
                         detalleRecibido.contains('repetic') ||
                         nombreRecibido.contains('repetic');
 
+                    // 3. APAGAMOS LA VOZ DE LA IA
                     _voiceService.detener();
 
+                    // 👇 B. AQUÍ APAGAMOS EL BUCLE INFINITO DE LA ALARMA 👇
+                    await NotificationService().apagarAlarmas();
+
+                    // 4. VIAJAMOS A LA SIGUIENTE PANTALLA
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
                         builder: (_) => AddMeasurementPresionAfterAlarm(
-                          // 👇 Usamos nuestra nueva variable inteligente 👇
                           esRepeticion: esRep,
                         ),
                       ),
@@ -178,7 +183,6 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                   ),
                 ),
               ),
-
             ],
           ),
         ),

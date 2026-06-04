@@ -187,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Center(
                     child: Text(
                       _obtenerFecha(),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -206,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           'Su próxima tarea es a las\n${vm.data?['proxima_tarea'] ?? '--:--'}',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 20, color: Colors.black87),
+                          style: const TextStyle(fontSize: 26, color: Colors.black87, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),

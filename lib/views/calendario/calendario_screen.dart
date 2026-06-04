@@ -184,7 +184,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     ),
                     selectedTextStyle: const TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                     ),
                     todayDecoration: BoxDecoration(
@@ -193,16 +193,16 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     ),
                     todayTextStyle: const TextStyle(
                       color: Color(0xFF000080),
-                      fontSize: 22,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                     ),
-                    defaultTextStyle: const TextStyle(fontSize: 20),
+                    defaultTextStyle: const TextStyle(fontSize: 32),
                     weekendTextStyle: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 32,
                       color: Colors.black54,
                     ),
                     outsideTextStyle: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 26,
                       color: Colors.grey,
                     ),
                     markerDecoration: const BoxDecoration(
@@ -211,13 +211,13 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     ),
                     markerSize: 10,
                     markersMaxCount: 3,
-                    cellMargin: const EdgeInsets.all(6),
+                    cellMargin: const EdgeInsets.all(3),
                   ),
                   headerStyle: const HeaderStyle(
                     formatButtonVisible: false,
                     titleCentered: true,
                     titleTextStyle: TextStyle(
-                      fontSize: 22,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF000080),
                     ),
@@ -261,14 +261,14 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                       'No hay eventos\nprogramados',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 32,
                         color: Colors.black54,
                       ),
                     ),
                   )
                       : ListView.builder(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 17, vertical: 8),
+                        horizontal: 20, vertical: 8),
                     itemCount: _eventosDelDiaSeleccionado.length,
                     itemBuilder: (context, index) {
                       final item = _eventosDelDiaSeleccionado[index];
@@ -282,11 +282,11 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                         child: Row(
                           children: [
                             SizedBox(
-                              width: 60,
+                              width: 70,
                               child: Text(
                                 item['hora'] ?? '',
                                 style: const TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 26,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -295,7 +295,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 12),
+                                    horizontal: 20, vertical: 12),
                                 decoration: BoxDecoration(
                                   color: colorRelleno,
                                   borderRadius:
@@ -323,7 +323,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                                           Text(
                                             item['nombre'] ?? '',
                                             style: const TextStyle(
-                                              fontSize: 20,
+                                              fontSize: 26,
                                               fontWeight:
                                               FontWeight.bold,
                                             ),
@@ -348,8 +348,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                                       ),
                                     ),
                                     const Icon(Icons.volume_up,
-                                        color: Colors.black54,
-                                        size: 28),
+                                        color: Colors.black,
+                                        size: 48),
                                   ],
                                 ),
                               ),

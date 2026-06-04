@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/add_activity_viewmodel.dart';
 import '../home/home_screen.dart';
+import '../../services/notificacion_service.dart';
 
 class AddActivityStep3HydrationScreen extends StatelessWidget {
   const AddActivityStep3HydrationScreen({Key? key}) : super(key: key);
@@ -173,11 +174,44 @@ class AddActivityStep3HydrationScreen extends StatelessWidget {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15),
                               side: const BorderSide(
-                                  color: Colors.black, width: 2),
+                                  color: Color(0xFFFF8800), width: 2),
                             ),
                           ),
                           onPressed: () async {
                             await vm.guardar();
+
+                            // 👇 2. AQUÍ CONECTAMOS LA NOTIFICACIÓN LOCAL 👇
+                            // Recorremos todas las horas que el usuario haya agregado a la lista
+                            for (int i = 0; i < vm.horas.length; i++) {
+                              final horaObj = vm.horas[i];
+                              final cantidadVasos = vm.cantidadEnIndice(i);
+
+                              DateTime fechaHoraAlarma;
+
+                              // Verificamos si la hora viene en formato TimeOfDay (lo más común en Flutter)
+                              final now = DateTime.now();
+                              fechaHoraAlarma = DateTime(now.year, now.month, now.day, horaObj.hour, horaObj.minute);
+
+                              // Si esa hora ya pasó hoy (ej: son las 15:00 y puso a las 10:00),
+                              // el sistema fallaría. Así que la pateamos automáticamente para mañana.
+                              if (fechaHoraAlarma.isBefore(now)) {
+                                fechaHoraAlarma = fechaHoraAlarma.add(const Duration(days: 1));
+                              }
+
+                              // Armamos la información que saldrá en la pantallita
+                              final datosNotificacion = {
+                                'id': DateTime.now().millisecond + i, // Un ID único para que no se pisen entre ellas
+                                'tipo': 'actividad',
+                                'nombre': '${vm.tipoActividad}: Tomar $cantidadVasos',
+                              };
+
+                              // ¡Le damos la orden a Android de que suene a esa hora!
+                              await NotificationService().programarNotificacionNormal(
+                                datosNotificacion,
+                                fechaHoraAlarma,
+                              );
+                            }
+
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
