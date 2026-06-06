@@ -68,6 +68,67 @@ class RecordatorioService {
     return medicionesFiltradas;
   }
 
+  // NUEVO FILTRO 3: Obtiene solo las actividades (Hidratación, etc.)
+  Future<List<Map<String, dynamic>>> obtenerSoloActividades() async {
+    Map<String, dynamic>? data = await obtenerHoy();
+    final prefs = await SharedPreferences.getInstance();
+
+    if (data != null && data['franjas'] != null) {
+      await prefs.setString(_localMedicamentosKey, jsonEncode(data));
+    } else {
+      final String? localDataStr = prefs.getString(_localMedicamentosKey);
+      if (localDataStr != null) {
+        data = jsonDecode(localDataStr);
+      }
+    }
+
+    if (data == null || data['franjas'] == null) return [];
+
+    final franjas = data['franjas'] as Map<String, dynamic>;
+    List<Map<String, dynamic>> actividadesFiltradas = [];
+
+    for (String franja in ['manana', 'tarde', 'noche']) {
+      final List<dynamic> tareas = franjas[franja] ?? [];
+      for (var tarea in tareas) {
+        // Guardamos únicamente si el tipo es 'actividad'
+        if (tarea['tipo'] == 'actividad') {
+          actividadesFiltradas.add(Map<String, dynamic>.from(tarea));
+        }
+      }
+    }
+    return actividadesFiltradas;
+  }
+
+  // NUEVO FILTRO 4: Obtiene solo las citas médicas
+  Future<List<Map<String, dynamic>>> obtenerSoloCitas() async {
+    Map<String, dynamic>? data = await obtenerHoy();
+    final prefs = await SharedPreferences.getInstance();
+
+    if (data != null && data['franjas'] != null) {
+      await prefs.setString(_localMedicamentosKey, jsonEncode(data));
+    } else {
+      final String? localDataStr = prefs.getString(_localMedicamentosKey);
+      if (localDataStr != null) {
+        data = jsonDecode(localDataStr);
+      }
+    }
+
+    if (data == null || data['franjas'] == null) return [];
+
+    final franjas = data['franjas'] as Map<String, dynamic>;
+    List<Map<String, dynamic>> citasFiltradas = [];
+
+    for (String franja in ['manana', 'tarde', 'noche']) {
+      final List<dynamic> tareas = franjas[franja] ?? [];
+      for (var tarea in tareas) {
+        if (tarea['tipo'] == 'cita') {
+          citasFiltradas.add(Map<String, dynamic>.from(tarea));
+        }
+      }
+    }
+    return citasFiltradas;
+  }
+
   // Obtiene los recordatorios de una fecha específica (YYYY-MM-DD)
   Future<Map<String, dynamic>?> obtenerDia(DateTime fecha) async {
     try {

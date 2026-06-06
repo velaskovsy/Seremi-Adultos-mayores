@@ -5,6 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/widgets/photo_box.dart';
 import '../../viewmodels/add_medication_viewmodel.dart';
 import '../home/home_screen.dart';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../core/widgets/photo_box.dart';
+import '../../viewmodels/add_medication_viewmodel.dart';
+import '../home/home_screen.dart';
 
 class AddMedicationStep4Screen extends StatelessWidget {
   const AddMedicationStep4Screen({Key? key}) : super(key: key);

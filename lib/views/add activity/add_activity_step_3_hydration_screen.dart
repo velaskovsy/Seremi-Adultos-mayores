@@ -178,40 +178,47 @@ class AddActivityStep3HydrationScreen extends StatelessWidget {
                             ),
                           ),
                           onPressed: () async {
-                            await vm.guardar();
+                            final now = DateTime.now();
+                            bool hayHoraPasada = false;
 
-                            // 👇 2. AQUÍ CONECTAMOS LA NOTIFICACIÓN LOCAL 👇
-                            // Recorremos todas las horas que el usuario haya agregado a la lista
+                            // 👇 1. VALIDACIÓN LIMPIA 👇
                             for (int i = 0; i < vm.horas.length; i++) {
                               final horaObj = vm.horas[i];
-                              final cantidadVasos = vm.cantidadEnIndice(i);
 
-                              DateTime fechaHoraAlarma;
-
-                              // Verificamos si la hora viene en formato TimeOfDay (lo más común en Flutter)
-                              final now = DateTime.now();
-                              fechaHoraAlarma = DateTime(now.year, now.month, now.day, horaObj.hour, horaObj.minute);
-
-                              // Si esa hora ya pasó hoy (ej: son las 15:00 y puso a las 10:00),
-                              // el sistema fallaría. Así que la pateamos automáticamente para mañana.
-                              if (fechaHoraAlarma.isBefore(now)) {
-                                fechaHoraAlarma = fechaHoraAlarma.add(const Duration(days: 1));
-                              }
-
-                              // Armamos la información que saldrá en la pantallita
-                              final datosNotificacion = {
-                                'id': DateTime.now().millisecond + i, // Un ID único para que no se pisen entre ellas
-                                'tipo': 'actividad',
-                                'nombre': '${vm.tipoActividad}: Tomar $cantidadVasos',
-                              };
-
-                              // ¡Le damos la orden a Android de que suene a esa hora!
-                              await NotificationService().programarNotificacionNormal(
-                                datosNotificacion,
-                                fechaHoraAlarma,
+                              DateTime fechaHoraVerificar = DateTime(
+                                  now.year,
+                                  now.month,
+                                  now.day,
+                                  horaObj.hour,
+                                  horaObj.minute
                               );
+
+                              if (fechaHoraVerificar.isBefore(now)) {
+                                hayHoraPasada = true;
+                                break;
+                              }
                             }
 
+                            // 👇 2. BLOQUEO 👇
+                            if (hayHoraPasada) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'No puedes programar un evento para una hora que ya pasó.',
+                                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 4),
+                                ),
+                              );
+                              return;
+                            }
+
+                            // 👇 3. GUARDAMOS EN LA BASE DE DATOS 👇
+                            // ¡Listo! Al guardar aquí, tu "Radar" interno lo detectará y enviará la notificación de WhatsApp solo.
+                            await vm.guardar();
+
+                            // 👇 4. VOLVEMOS AL MENÚ PRINCIPAL 👇
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(

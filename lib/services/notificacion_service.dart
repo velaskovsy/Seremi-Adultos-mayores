@@ -11,6 +11,7 @@ import '../views/alarma_medicacion/alarma_medicacion_screen.dart';
 import '../views/alarma_presion/alarma_presion_screen.dart' show AlarmaMedicionScreen;
 
 class NotificationService {
+  static int ultimoIdProcesado = -1; // para evitar pantallas duplicadas
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -36,18 +37,38 @@ class NotificationService {
         if (payload != null) {
           final Map<String, dynamic> datosPayload = jsonDecode(payload);
 
+          // REVISIÓN DEL GUARDIA
+          final int currentId = datosPayload['id'] ?? 0;
+          if (NotificationService.ultimoIdProcesado == currentId) {
+            print('Ignorando doble orden. La pantalla ya fue abierta.');
+            return; // Corta la ejecución aquí para no abrir la segunda pantalla
+          }
+          NotificationService.ultimoIdProcesado = currentId; // Registramos que ya lo procesamos
+          // FIN REVISIÓN
+
           if (datosPayload['tipo'] == 'medicion_repeticion' || datosPayload['tipo'] == 'medicion') {
             navigatorKey.currentState?.push(
               MaterialPageRoute(
                 builder: (_) => AlarmaMedicionScreen(medicion: datosPayload),
               ),
             );
-          } else {
+          }
+          // else para validación
+          else if (datosPayload['tipo'] == 'medicamento') {
             navigatorKey.currentState?.push(
               MaterialPageRoute(
                 builder: (_) => AlarmScreen(medicamento: datosPayload),
               ),
             );
+          }
+          // Agregamos nuestra nueva actividad para que el sistema la reconozca
+          else if (datosPayload['tipo'] == 'actividad') {
+            print('El usuario tocó la notificación de actividad (Agua).');
+          }
+
+          // AGREGAMOS ESTE NUEVO BLOQUE PARA LA CITA
+          else if (datosPayload['tipo'] == 'cita') {
+            print('El usuario tocó la notificación de la Cita Médica.');
           }
         }
       },
@@ -74,7 +95,7 @@ class NotificationService {
       vibrationPattern: patronVibracion,
       additionalFlags: banderaInsistente,
 
-      // 👇 MAGIA ANTI-DESLIZAMIENTO 👇
+      // MAGIA ANTI-DESLIZAMIENTO
       ongoing: true,      // Hace que la notificación sea "fija"
       autoCancel: false,  // Evita que desaparezca al tocarla
     );
@@ -135,49 +156,51 @@ class NotificationService {
     );
   }
 
-  // 👇 NUEVA FUNCIÓN PARA EL BOTÓN VERDE 👇
   Future<void> apagarAlarmas() async {
     // Destruye todas las notificaciones activas para cortar el sonido/vibración
     await _notificationsPlugin.cancelAll();
   }
 
-  Future<void> programarNotificacionNormal(Map<String, dynamic> datosEvento, DateTime fechaHoraProgramada) async {
+  // Función que tira el mensaje instantáneamente
+  Future<void> mostrarNotificacionEstiloWhatsapp(Map<String, dynamic> datosEvento) async {
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'canal_actividades_v1',
+        'Actividades Simples',
+        channelDescription: 'Notificaciones normales estilo mensaje',
+        importance: Importance.max, // Máxima para que baje desde arriba
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      );
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'canal_eventos_normales_v1', // ID distinto para que no se mezcle con las alarmas
-      'Citas y Actividades',
-      channelDescription: 'Notificaciones simples para recordatorios del día',
+      const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
 
-      // Con Importance y Priority en High, sale la tarjetita arriba y suena,
-      // pero el usuario puede deslizarla para borrarla sin problemas.
-      importance: Importance.high,
-      priority: Priority.high,
+      String titulo = '¡Recordatorio!';
+      if (datosEvento['tipo'] == 'cita') {
+        titulo = '📅 ¡Tienes una Cita Médica!';
+      } else if (datosEvento['tipo'] == 'actividad') {
+        titulo = '💧 ¡Hora de tu Actividad!';
+      }
 
-      // Sonido y vibración estándar de Android (no usa alarma pesada)
-      playSound: true,
-      enableVibration: true,
+      String cuerpo = datosEvento['nombre'] ?? 'Revisa tu aplicación';
 
-      // ❌ IMPORTANTE: No le ponemos fullScreenIntent, ni ongoing, ni bucle.
-    );
+      // Si tiene detalle (ej: "1 vaso"), lo agregamos al mensaje
+      if (datosEvento['detalle'] != null) {
+        cuerpo = '$cuerpo: ${datosEvento['detalle']}';
+      }
 
-    const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+      await _notificationsPlugin.show(
+        id: datosEvento['id'] ?? DateTime.now().millisecond,
+        title: titulo,
+        body: cuerpo,
+        notificationDetails: platformDetails,
+        payload: jsonEncode(datosEvento),
+      );
 
-    // Convertimos la fecha normal a la fecha con zona horaria que exige la librería
-    final horaTz = tz.TZDateTime.from(fechaHoraProgramada, tz.local);
-
-    // Determinamos el título según el tipo
-    String titulo = '¡Recordatorio!';
-    if (datosEvento['tipo'] == 'cita') titulo = '📅 Tienes una Cita Médica';
-    if (datosEvento['tipo'] == 'actividad') titulo = '🏃‍♂️ Hora de tu Actividad';
-
-    await _notificationsPlugin.zonedSchedule(
-      id: datosEvento['id'] ?? DateTime.now().millisecond, // Usa el ID del evento o uno aleatorio
-      title: titulo,
-      body: datosEvento['nombre'] ?? 'Revisa tu calendario para más detalles.',
-      scheduledDate: horaTz,
-      notificationDetails: platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: jsonEncode(datosEvento),
-    );
+      print('✅ Notificación programada con éxito');
+    } catch (e) {
+      print('❌ Error al mostrar notificación simple: $e');
+    }
   }
 }
