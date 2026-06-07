@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-// SOLUCIÓN DEFINITIVA AL UNDEFINED: Importación absoluta de tu proyecto corporativo
 import 'package:seremi_adultos_mayores/main.dart';
-
 import '../services/recordatorio_service.dart';
 import '../services/notificacion_service.dart';
 import '../views/alarma_medicacion/alarma_medicacion_screen.dart';
 import '../views/alarma_presion/alarma_presion_screen.dart'; // Tu nueva interfaz del mockup
+import 'package:flutter/services.dart';
 
 class AlarmViewModel extends ChangeNotifier {
   final RecordatorioService _recordatorioService = RecordatorioService();
@@ -16,6 +14,8 @@ class AlarmViewModel extends ChangeNotifier {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  static const platform = MethodChannel('salud_mayor/alarma');
 
   Timer? _alarmTimer;
 
@@ -56,6 +56,13 @@ class AlarmViewModel extends ChangeNotifier {
           _alarmasDisparadas[llaveUnica] = horaActualStr;
 
           await _notificationService.dispararNotificacionPantallaCompleta(medicamento);
+          NotificationService.ultimoIdProcesado = id; // AVISAMOS AL GUARDIA
+
+          try {
+            await platform.invokeMethod('traerAlFrente');
+          } catch (e) {
+            print("No se pudo maximizar la app: $e");
+          }
 
           navigatorKey.currentState?.push(
             MaterialPageRoute(builder: (_) => AlarmScreen(medicamento: medicamento)),
@@ -79,11 +86,57 @@ class AlarmViewModel extends ChangeNotifier {
 
           await _notificationService.dispararNotificacionPantallaCompleta(medicion);
 
+          try {
+            await platform.invokeMethod('traerAlFrente');
+          } catch (e) {
+            print("No se pudo maximizar la app: $e");
+          }
+
           // Lanza la pantalla de presión del mockup de forma segura
           navigatorKey.currentState?.push(
             MaterialPageRoute(builder: (_) => AlarmaMedicionScreen(medicion: medicion)),
           );
           print("¡Pantalla de Medición de Presión abierta con éxito!");
+        }
+      }
+
+      // ==========================================
+      // BARRIDO 3: BUSCAR ACTIVIDADES (HIDRATACIÓN)
+      // ==========================================
+      final listadoActividades = await _recordatorioService.obtenerSoloActividades();
+      for (var actividad in listadoActividades) {
+        final String hora = actividad['hora'] ?? '';
+        final int id = actividad['id'] ?? 0;
+        final String llaveUnica = "actividad_${id}";
+
+        if (hora.isNotEmpty && hora.trim() == horaActualStr) {
+          if (_alarmasDisparadas[llaveUnica] == horaActualStr) continue;
+          _alarmasDisparadas[llaveUnica] = horaActualStr;
+
+          // Dispara el mensaje estilo WhatsApp. ¡Sin abrir pantallas!
+          await _notificationService.mostrarNotificacionEstiloWhatsapp(actividad);
+
+          print("¡Notificación simple de Actividad enviada!");
+        }
+      }
+
+      // ==========================================
+      // BARRIDO 4: BUSCAR CITAS MÉDICAS
+      // ==========================================
+      final listadoCitas = await _recordatorioService.obtenerSoloCitas();
+      for (var cita in listadoCitas) {
+        final String hora = cita['hora'] ?? '';
+        final int id = cita['id'] ?? 0;
+        final String llaveUnica = "cita_${id}";
+
+        if (hora.isNotEmpty && hora.trim() == horaActualStr) {
+          if (_alarmasDisparadas[llaveUnica] == horaActualStr) continue;
+          _alarmasDisparadas[llaveUnica] = horaActualStr;
+
+          // Reutilizamos exactamente la misma función de notificación simple que usamos para el agua
+          await _notificationService.mostrarNotificacionEstiloWhatsapp(cita);
+
+          print("¡Notificación simple de Cita Médica enviada!");
         }
       }
 

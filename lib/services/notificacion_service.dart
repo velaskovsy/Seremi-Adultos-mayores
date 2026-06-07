@@ -1,23 +1,26 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz; // Necesario para programar en el futuro
+import 'package:timezone/data/latest.dart' as tz;
+
+import '../main.dart';
+import '../viewmodels/alarma_presion_viewmodel.dart' hide AlarmaMedicionScreen;
+import '../views/alarma_medicacion/alarma_medicacion_screen.dart';
+import '../views/alarma_presion/alarma_presion_screen.dart' show AlarmaMedicionScreen;
 
 class NotificationService {
-  // Patrón Singleton para usar la misma instancia en toda la app
+  static int ultimoIdProcesado = -1; // para evitar pantallas duplicadas
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  /// Se ejecuta en el main.dart al abrir la app para registrar el plugin en Android
   Future<void> initNotification() async {
-
-    // 👇 AQUÍ ESTÁ "LA WEA" AGREGADA 👇
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('America/Santiago')); // Configura la hora exacta de Chile
-    // 👆 HASTA AQUÍ 👆
+    tz.setLocalLocation(tz.getLocation('America/Santiago'));
 
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -26,30 +29,75 @@ class NotificationService {
       android: initializationSettingsAndroid,
     );
 
-    // SOLUCIÓN AQUÍ: Se agrega el parámetro nombrado 'settings:'
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        final String? payload = response.payload;
+
+        if (payload != null) {
+          final Map<String, dynamic> datosPayload = jsonDecode(payload);
+
+          // REVISIÓN DEL GUARDIA
+          final int currentId = datosPayload['id'] ?? 0;
+          if (NotificationService.ultimoIdProcesado == currentId) {
+            print('Ignorando doble orden. La pantalla ya fue abierta.');
+            return; // Corta la ejecución aquí para no abrir la segunda pantalla
+          }
+          NotificationService.ultimoIdProcesado = currentId; // Registramos que ya lo procesamos
+          // FIN REVISIÓN
+
+          if (datosPayload['tipo'] == 'medicion_repeticion' || datosPayload['tipo'] == 'medicion') {
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => AlarmaMedicionScreen(medicion: datosPayload),
+              ),
+            );
+          }
+          // else para validación
+          else if (datosPayload['tipo'] == 'medicamento') {
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => AlarmScreen(medicamento: datosPayload),
+              ),
+            );
+          }
+          // Agregamos nuestra nueva actividad para que el sistema la reconozca
+          else if (datosPayload['tipo'] == 'actividad') {
+            print('El usuario tocó la notificación de actividad (Agua).');
+          }
+
+          // AGREGAMOS ESTE NUEVO BLOQUE PARA LA CITA
+          else if (datosPayload['tipo'] == 'cita') {
+            print('El usuario tocó la notificación de la Cita Médica.');
+          }
+        }
+      },
     );
   }
 
-  /// Este es el método que simula la alarma intrusiva
   Future<void> dispararNotificacionPantallaCompleta(Map<String, dynamic> medicamento) async {
+    final Int64List patronVibracion = Int64List.fromList([0, 1000, 500, 1000]);
+    final Int32List banderaInsistente = Int32List.fromList(<int>[4]);
 
     AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'medicamentos_channel_id',
+      'medicamentos_channel_id_v6', // 👈 _v6
       'Recordatorios de Medicación',
       channelDescription: 'Canal de alta prioridad para asegurar la toma de remedios',
-      importance: Importance.max, // Máxima importancia
-      priority: Priority.high,     // Máxima prioridad
-
-      // ESTAS LÍNEAS TRABAJAN JUNTAS PARA FORZAR EL SALTO DE PANTALLA
+      importance: Importance.max,
+      priority: Priority.high,
       fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,
       audioAttributesUsage: AudioAttributesUsage.alarm,
-      ongoing: true,
-
-      // CONFIGURACIÓN EXTRA DE VISIBILIDAD (Fuerza a mostrarse sobre todo)
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: const UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+      enableVibration: true,
+      vibrationPattern: patronVibracion,
+      additionalFlags: banderaInsistente,
+
+      // MAGIA ANTI-DESLIZAMIENTO
+      ongoing: true,      // Hace que la notificación sea "fija"
+      autoCancel: false,  // Evita que desaparezca al tocarla
     );
 
     NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
@@ -64,16 +112,17 @@ class NotificationService {
   }
 
   Future<void> programarRepeticionPresion(Map<String, dynamic> medicionAnterior, int minutos) async {
-    // 1. Preparamos los datos que viajarán ocultos en la notificación (Payload)
-    // Le ponemos tipo 'medicion_repeticion' para que el main.dart sepa cómo reaccionar
     final payloadData = {
       ...medicionAnterior,
       'tipo': 'medicion_repeticion',
       'nombre': 'Control de Presión (Repetición)',
     };
 
-    const androidDetails = AndroidNotificationDetails(
-      'presion_repeticion_channel',
+    final Int64List patronVibracion = Int64List.fromList([0, 1000, 500, 1000]);
+    final Int32List banderaInsistente = Int32List.fromList(<int>[4]);
+
+    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'presion_repeticion_channel_v6', // 👈 _v6
       'Repetición Presión',
       channelDescription: 'Recordatorio para repetir medición de presión',
       importance: Importance.max,
@@ -81,21 +130,77 @@ class NotificationService {
       fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: const UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+      enableVibration: true,
+      vibrationPattern: patronVibracion,
+      additionalFlags: banderaInsistente,
+
+      // 👇 MAGIA ANTI-DESLIZAMIENTO 👇
+      ongoing: true,
+      autoCancel: false,
     );
 
-    final platformDetails = const NotificationDetails(android: androidDetails);
+    final platformDetails = NotificationDetails(android: androidDetails);
 
-    // Calculamos la hora exacta
     final horaProgramada = tz.TZDateTime.now(tz.local).add(Duration(minutes: minutos));
 
     await _notificationsPlugin.zonedSchedule(
-      id: 999, // Nombre explícito agregado
-      title: '¡Hora de repetir la medición!', // Nombre explícito agregado
-      body: 'Han pasado $minutos minutos. Por favor mídase la presión nuevamente.', // Nombre explícito agregado
-      scheduledDate: horaProgramada, // Nombre explícito agregado
-      notificationDetails: platformDetails, // Nombre explícito agregado
+      id: 999,
+      title: '¡Hora de repetir la medición!',
+      body: 'Han pasado $minutos minutos. Por favor mídase la presión nuevamente.',
+      scheduledDate: horaProgramada,
+      notificationDetails: platformDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: jsonEncode(payloadData),
     );
+  }
+
+  Future<void> apagarAlarmas() async {
+    // Destruye todas las notificaciones activas para cortar el sonido/vibración
+    await _notificationsPlugin.cancelAll();
+  }
+
+  // Función que tira el mensaje instantáneamente
+  Future<void> mostrarNotificacionEstiloWhatsapp(Map<String, dynamic> datosEvento) async {
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'canal_actividades_v1',
+        'Actividades Simples',
+        channelDescription: 'Notificaciones normales estilo mensaje',
+        importance: Importance.max, // Máxima para que baje desde arriba
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      );
+
+      const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+
+      String titulo = '¡Recordatorio!';
+      if (datosEvento['tipo'] == 'cita') {
+        titulo = '📅 ¡Tienes una Cita Médica!';
+      } else if (datosEvento['tipo'] == 'actividad') {
+        titulo = '💧 ¡Hora de tu Actividad!';
+      }
+
+      String cuerpo = datosEvento['nombre'] ?? 'Revisa tu aplicación';
+
+      // Si tiene detalle (ej: "1 vaso"), lo agregamos al mensaje
+      if (datosEvento['detalle'] != null) {
+        cuerpo = '$cuerpo: ${datosEvento['detalle']}';
+      }
+
+      await _notificationsPlugin.show(
+        id: datosEvento['id'] ?? DateTime.now().millisecond,
+        title: titulo,
+        body: cuerpo,
+        notificationDetails: platformDetails,
+        payload: jsonEncode(datosEvento),
+      );
+
+      print('✅ Notificación programada con éxito');
+    } catch (e) {
+      print('❌ Error al mostrar notificación simple: $e');
+    }
   }
 }

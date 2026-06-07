@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/voice_service.dart'; // Importa tu servicio de voz
+import '../../services/notificacion_service.dart';
 
 // ⚠️ IMPORTACIÓN DE TU PANTALLA DE REGISTRO DE PRESIÓN POST-ALARMA
 // Ajusta la ruta exacta según dónde tengas guardado este archivo
@@ -31,7 +32,7 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
     // Asegura la inicialización del motor TTS antes de hablar
     await _voiceService.init();
     // Frase personalizada y pausada ideal para accesibilidad
-    await _voiceService.hablar("Atención. ¡Hora de tu alarma! Es momento de: $nombre. Por favor, utiliza el $detalle.");
+    await _voiceService.hablar("Atención. ¡Hora de tu alarma! Es momento de: $nombre. Instrucciones $detalle.");
   }
 
   @override
@@ -132,27 +133,48 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
               ),
 
               // =========================================================
-              // MODIFICADO: BOTÓN VERDE "YA LA MEDÍ" CON PUSH TRADICIONAL
+              // BOTÓN VERDE CON ESCÁNER Y DETECCIÓN INTELIGENTE
               // =========================================================
               SizedBox(
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // 1. Apagamos la voz inmediatamente para que no siga hablando en la ventana del formulario
+                  // 👇 A. LE AGREGAMOS LA PALABRA "async" AQUÍ 👇
+                  onPressed: () async {
+                    // 1. ESCÁNER: Imprimimos en consola qué trae exactamente la notificación
+                    print('=====================================');
+                    print('🕵️‍♂️ DATOS DE LA NOTIFICACIÓN QUE TOCASTE:');
+                    print(widget.medicion);
+                    print('=====================================');
+
+                    // 2. DETECCIÓN INTELIGENTE:
+                    String tipoRecibido = widget.medicion['tipo']?.toString().toLowerCase() ?? '';
+                    String detalleRecibido = widget.medicion['detalle']?.toString().toLowerCase() ?? '';
+                    String nombreRecibido = widget.medicion['nombre']?.toString().toLowerCase() ?? '';
+
+                    bool esRep = tipoRecibido.contains('repetic') ||
+                        detalleRecibido.contains('repetic') ||
+                        nombreRecibido.contains('repetic');
+
+                    // 3. APAGAMOS LA VOZ DE LA IA
                     _voiceService.detener();
 
-                    // 2. Hacemos un PUSH normal para apilar la pantalla del formulario sobre la de la alarma
-                    Navigator.push(
+                    // 👇 B. AQUÍ APAGAMOS EL BUCLE INFINITO DE LA ALARMA 👇
+                    await NotificationService().apagarAlarmas();
+
+                    // 4. VIAJAMOS A LA SIGUIENTE PANTALLA
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const AddMeasurementPresionAfterAlarm(),
+                        builder: (_) => AddMeasurementPresionAfterAlarm(
+                          esRepeticion: esRep,
+                        ),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1AA23A), // Verde vibrante exacto de la imagen de alarma
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Botón redondeado
+                    backgroundColor: const Color(0xFF1AA23A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 3,
                   ),
                   child: const Text(
@@ -161,7 +183,6 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                   ),
                 ),
               ),
-
             ],
           ),
         ),

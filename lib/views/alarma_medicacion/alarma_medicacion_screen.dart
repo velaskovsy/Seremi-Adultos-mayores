@@ -1,6 +1,7 @@
 // lib/views/alarma_medicacion/alarma_medicacion_screen.dart
 import 'package:flutter/material.dart';
 import '../../services/voice_service.dart'; // Importamos tu nuevo servicio de voz
+import '../../services/notificacion_service.dart';
 
 class AlarmScreen extends StatefulWidget {
   final Map<String, dynamic> medicamento;
@@ -137,8 +138,14 @@ class _AlarmScreenState extends State<AlarmScreen> {
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
-                  onPressed: () {
-                    _voiceService.detener(); // Detiene la voz inmediatamente
+                  onPressed: () async {
+                    // 1. Detenemos la voz de la IA
+                    _voiceService.detener();
+
+                    // 2. APAGAMOS EL BUCLE DE LA ALARMA ANDROID
+                    await NotificationService().apagarAlarmas();
+
+                    // 3. Cerramos la pantalla
                     Navigator.of(context).pop();
                   },
                   style: ElevatedButton.styleFrom(

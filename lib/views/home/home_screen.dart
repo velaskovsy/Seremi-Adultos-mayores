@@ -12,6 +12,9 @@ import '../login/login_screen.dart';
 import '../reminder/add_reminder_screen.dart';
 import '../editar o eliminar recordatorio/detalle_medicamento_screen.dart'; // Ajusta la ruta a donde la hayas guardado
 
+import 'package:permission_handler/permission_handler.dart';
+import '../configuracion/permisos_screen.dart'; // Ajusta la ruta según dónde la guardaste
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -36,9 +39,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     vm.cargar();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // CORREGIDO: Dejamos los paréntesis vacíos porque ya no requiere el context local
+    // 👇 AQUÍ AGREGAMOS EL ASYNC Y LA REVISIÓN DE PERMISOS 👇
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas();
+
+      // Revisamos en silencio si los permisos vitales están activos
+      final notificaciones = await Permission.notification.isGranted;
+      final bateria = await Permission.ignoreBatteryOptimizations.isGranted;
+
+      // Si falta alguno, empujamos al usuario a la pantalla de configuración
+      if (!notificaciones || !bateria) {
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PermisosScreen()),
+          );
+        }
+      }
     });
 
     // Inicializamos las configuraciones del TTS
@@ -165,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+              // Botón de Salir (Izquierda)
               Positioned(
                 top: 40,
                 left: 10,
@@ -173,6 +191,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => _handleLogout(context),
                 ),
               ),
+              // 👇 NUEVO BOTÓN DE AJUSTES (Derecha) 👇
+              Positioned(
+                top: 40,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.settings, color: Colors.white, size: 32),
+                  tooltip: 'Configurar permisos de alarma',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PermisosScreen()),
+                    );
+                  },
+                ),
+              ),
+              // 👆 FIN DE NUEVO BOTÓN 👆
             ],
           ),
 
@@ -187,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Center(
                     child: Text(
                       _obtenerFecha(),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -206,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           'Su próxima tarea es a las\n${vm.data?['proxima_tarea'] ?? '--:--'}',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 20, color: Colors.black87),
+                          style: const TextStyle(fontSize: 26, color: Colors.black87, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
