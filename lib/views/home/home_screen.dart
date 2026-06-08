@@ -249,7 +249,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 20),
 
                   // BOTÓN AÑADIR RECORDATORIO
-                  Center(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0), // Margen para que no toque los bordes
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
@@ -262,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       child: SizedBox(
-                        width: 378,
+                        width: double.infinity,
                         height: 92,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
@@ -287,9 +288,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: const Icon(Icons.add, color: Color(0xFF4CAF50), size: 28),
                               ),
                               const SizedBox(width: 12),
-                              const Text(
-                                'AÑADIR RECORDATORIO',
-                                style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+                              const Expanded(
+                                child: Text(
+                                  'AÑADIR RECORDATORIO',
+                                  style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center, // Centra si salta de línea
+                                  maxLines: 2, // Permite que se acomode en 2 líneas en celulares chicos
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),
@@ -304,10 +310,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 17),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center, // 1. Centra todo el grupo (Icono + Texto)
                       children: const [
                         Icon(Icons.access_time, color: Color(0xFF000080), size: 38),
                         SizedBox(width: 10),
-                        Text('HORARIO DEL DÍA', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                        // 👇 2. Flexible permite que salte de línea, pero sin separarse del icono
+                        Flexible(
+                          child: Text(
+                            'HORARIO DEL DÍA',
+                            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center, // 3. Centra las palabras si se parten en dos líneas
+                            maxLines: 2,
+                          ),
+                        ),
                       ],
                     ),
                   ),

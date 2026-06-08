@@ -124,39 +124,49 @@ class AddAppointmentStep1Screen extends StatelessWidget {
 
                   // FECHA
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'FECHA',
-                        style: TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                      // 👇 1. "FECHA" cede espacio si el teléfono es muy chico
+                      const Expanded(
+                        child: Text(
+                          'FECHA',
+                          style: TextStyle(
+                            fontFamily: 'Roboto',
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 10), // Separación segura
                       GestureDetector(
                         onTap: () => _seleccionarFecha(context, vm),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
+                          // Bajamos un milímetro el padding horizontal (de 20 a 16)
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: const Color(0xFF000080),
                             borderRadius: BorderRadius.circular(10),
                           ),
+                          // 👇 2. Obligamos al Row interno a no estirarse al infinito
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                vm.fechaTexto,
-                                style: const TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 22,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                              // 👇 3. Flexible por si la fecha es brutalmente larga
+                              Flexible(
+                                child: Text(
+                                  vm.fechaTexto,
+                                  style: const TextStyle(
+                                    fontFamily: 'Roboto',
+                                    fontSize: 24,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_drop_down,
-                                  color: Colors.white),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_drop_down, color: Colors.white),
                             ],
                           ),
                         ),

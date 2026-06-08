@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/register_viewmodel.dart';
 import '../register/register_step2_screen.dart';
 import '../../../core/widgets/input_field.dart';
+import '../../core/utils/rut_formatter.dart';
 
 class RegisterStep1Screen extends StatelessWidget {
   const RegisterStep1Screen({Key? key}) : super(key: key);
@@ -112,6 +113,7 @@ class RegisterStep1Screen extends StatelessWidget {
                     errorText: vm.errorRut,
                     hintFontSize: 30,
                     verticalPadding: 17,
+                    inputFormatters: [RutFormatter()],
                   ),
 
                   const SizedBox(height: 20),

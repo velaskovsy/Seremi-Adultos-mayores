@@ -61,7 +61,7 @@ class AlarmViewModel extends ChangeNotifier {
         final int id = medicamento['id'] ?? 0;
         final String llaveUnica = "med_$id";
 
-        // 👇 LA NUEVA REGLA: Revisar la RAM y el Disco Duro 👇
+        // Revisar la RAM y el Disco Duro
         bool yaTomadaHoy = prefs.getBool("${llaveUnica}_$fechaHoy") ?? false;
         if (yaTomadaHoy || AlarmViewModel.alarmasSilenciadas.contains(llaveUnica)) {
           continue; // Si ya la tomó hoy físicamente, la ignoramos para siempre

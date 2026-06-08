@@ -12,6 +12,7 @@ class InputField extends StatelessWidget {
   final double verticalPadding;
   final double hintFontSize;
   final TextInputType keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   const InputField({
     Key? key,
@@ -25,6 +26,7 @@ class InputField extends StatelessWidget {
     this.verticalPadding = 28,
     this.hintFontSize = 32,
     this.keyboardType = TextInputType.text,
+    this.inputFormatters,
   }) : super(key: key);
 
   @override
@@ -60,12 +62,15 @@ class InputField extends StatelessWidget {
               obscureText: isPassword && !passwordVisible,
               textAlign: TextAlign.center,
               keyboardType: isPassword ? TextInputType.number : keyboardType,
+
+              // 👇 AQUÍ ESTÁ LA MAGIA CORREGIDA
               inputFormatters: isPassword
                   ? [
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(4),
               ]
-                  : [],
+                  : inputFormatters, // 👈 Se reemplazó el [] por la variable
+
               style: const TextStyle(
                 fontSize: 32,
                 color: Color(0xFF000080),

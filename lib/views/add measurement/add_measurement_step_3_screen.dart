@@ -31,15 +31,14 @@ class AddMeasurementStep3Screen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.camera_alt,
-                  color: Color(0xFF000080), size: 32),
-              title: const Text('Tomar foto',
-                  style: TextStyle(fontSize: 20)),
+              leading: const Icon(Icons.camera_alt, color: Color(0xFF000080), size: 32),
+              title: const Text('Tomar foto', style: TextStyle(fontSize: 20)),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(context); // Cierra el menú de abajo
                 final foto = await vm.tomarFoto(ImageSource.camera);
+
                 if (foto != null) {
-                  _confirmarFoto(context, vm, foto);
+                  vm.setFotoInstrumento(foto);
                 }
               },
             ),
@@ -58,66 +57,6 @@ class AddMeasurementStep3Screen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Confirmación de foto tomada con cámara ───────────────
-  void _confirmarFoto(BuildContext context, AddMeasurementViewModel vm,
-      XFile foto) {
-    showDialog(
-      context: context,
-      builder: (_) => Stack(
-        children: [
-          Positioned.fill(
-            child: Image.file(
-              File(foto.path),
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // ✗ Desechar
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close,
-                        color: Colors.white, size: 36),
-                  ),
-                ),
-                const SizedBox(width: 40),
-                // ✓ Guardar
-                GestureDetector(
-                  onTap: () {
-                    vm.setFotoInstrumento(foto);
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check,
-                        color: Colors.white, size: 36),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -310,7 +249,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15),
                                 side: const BorderSide(
-                                    color: Colors.black, width: 2),
+                                    color: Color(0xFFFF8800), width: 2),
                               ),
                             ),
                             onPressed: vm.guardando

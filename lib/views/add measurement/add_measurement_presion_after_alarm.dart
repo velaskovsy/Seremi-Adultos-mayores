@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-// Importación exacta que tienes configurada en tu proyecto
+import 'package:flutter/services.dart'; // Necesario para los formatters
 import '../semaforizacion/resultado_semaforizacion_screen.dart';
 import '../alarma_presion/alerta_critica_presion_alta.dart';
+import '../../core/utils/presion_formatter.dart';
 
 class AddMeasurementPresionAfterAlarm extends StatefulWidget {
   final bool esRepeticion;
-  // 👇 1. NUEVO: Recibimos las instrucciones originales para pasarlas al Semáforo
   final String instruccionesOriginales;
 
   const AddMeasurementPresionAfterAlarm({
@@ -40,7 +40,7 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
 
       String valorPresion = _valueController.text.trim();
 
-      // 👇 2. EVALUACIÓN Y ATAJO A EMERGENCIAS 👇
+      // 2. EVALUACIÓN Y ATAJO A EMERGENCIAS
       List<String> partes = valorPresion.split('/');
       int sistolica = int.tryParse(partes[0].trim()) ?? 0;
       int diastolica = (partes.length > 1) ? (int.tryParse(partes[1].trim()) ?? 0) : 0;
@@ -127,9 +127,13 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: _valueController,
-                    keyboardType: TextInputType.text,
+
+                    keyboardType: TextInputType.number,
+
+                    inputFormatters: [PresionFormatter()],
+
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 32,
                       color: inputTextColor,
                       fontWeight: FontWeight.w500,
                     ),
@@ -183,8 +187,9 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                     },
                   ),
                   const SizedBox(height: 20),
+
                   const Text(
-                    'Escriba el valor tal como aparece en su tensiómetro (incluyendo la barra si la tiene).',
+                    'Escriba el valor tal como aparece en su tensiómetro\n\nEscriba los números seguidos, la barra "/" se pondrá de forma automática.',
                     style: TextStyle(
                       fontSize: 24,
                       color: Color(0xFF000080),
