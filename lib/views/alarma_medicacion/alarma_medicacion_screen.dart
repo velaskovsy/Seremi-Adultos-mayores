@@ -1,7 +1,11 @@
 // lib/views/alarma_medicacion/alarma_medicacion_screen.dart
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'dart:async'; // 👈 1. IMPORTAMOS EL TEMPORIZADOR
 import 'package:flutter/material.dart';
-import '../../services/voice_service.dart'; // Importamos tu nuevo servicio de voz
+import '../../services/voice_service.dart';
 import '../../services/notificacion_service.dart';
+import '../../viewmodels/alarma_medicacion_viewmodel.dart'; // 👈 1. IMPORTAMOS EL RADAR PARA LA LISTA NEGRA
 
 class AlarmScreen extends StatefulWidget {
   final Map<String, dynamic> medicamento;
@@ -15,20 +19,44 @@ class AlarmScreen extends StatefulWidget {
 class _AlarmScreenState extends State<AlarmScreen> {
   final VoiceService _voiceService = VoiceService();
 
+  // 👇 2. VARIABLE DEL RELOJ DE ARENA
+  Timer? _autoCloseTimer;
+
   @override
   void initState() {
     super.initState();
+
+    // 👇 1. CERRAMOS EL CANDADO (Para que el radar no apile otra)
+    AlarmViewModel.pantallaAlarmaAbierta = true;
 
     // 🔥 Captura el momento exacto en que la pantalla aparece y habla
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _reproducirAlarmaPorVoz();
     });
+
+    // 👇 2. INICIAMOS LA CUENTA REGRESIVA DE 59 SEGUNDOS
+    _autoCloseTimer = Timer(const Duration(seconds: 59), () {
+      if (mounted) {
+        print("⏳ El usuario no contestó en 60 segundos. Cerrando pantalla para permitir reintento...");
+        Navigator.of(context).pop();
+      }
+    });
   }
 
   @override
   void dispose() {
-    // Si la pantalla se destruye, matamos el audio por seguridad
+    // ABRIMOS EL CANDADO (Para liberar al radar de nuevo)
+    AlarmViewModel.pantallaAlarmaAbierta = false;
+
+    // MATAMOS EL RELOJ SI LA PANTALLA SE CIERRA MANUALMENTE
+    _autoCloseTimer?.cancel();
+
+    // Si la pantalla se destruye, matamos la IA
     _voiceService.detener();
+
+    // 👇 LA SOLUCIÓN AL AUDIO FANTASMA: Apagamos el ruido de Android si se acaba el tiempo
+    NotificationService().apagarAlarmas();
+
     super.dispose();
   }
 
@@ -138,16 +166,26 @@ class _AlarmScreenState extends State<AlarmScreen> {
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    // 1. Detenemos la voz de la IA
-                    _voiceService.detener();
+                    onPressed: () async {
+                      final int id = widget.medicamento['id'] ?? 0;
+                      final String llaveUnica = "med_$id";
 
-                    // 2. APAGAMOS EL BUCLE DE LA ALARMA ANDROID
-                    await NotificationService().apagarAlarmas();
+                      // 1. Lo guardamos en la RAM (rápido)
+                      AlarmViewModel.alarmasSilenciadas.add(llaveUnica);
 
-                    // 3. Cerramos la pantalla
-                    Navigator.of(context).pop();
-                  },
+                      // 👇 2. LA CURA DEL ALZHEIMER: Lo guardamos en el Disco Duro 👇
+                      final prefs = await SharedPreferences.getInstance();
+                      final String fechaHoy = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                      await prefs.setBool("${llaveUnica}_$fechaHoy", true);
+
+                      // 3. Apagamos todo y cerramos
+                      _voiceService.detener();
+                      await NotificationService().apagarAlarmas();
+
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1AA23A),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
