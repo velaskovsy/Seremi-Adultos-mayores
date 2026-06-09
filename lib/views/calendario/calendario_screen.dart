@@ -1,99 +1,106 @@
+// lib/views/calendario/calendario_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../../core/widgets/app_footer.dart';
-import '../../services/recordatorio_service.dart';
+import 'package:flutter_tts/flutter_tts.dart'; // 👈 IMPORTACIÓN DEL TTS
 
-class CalendarioScreen extends StatefulWidget {
+import '../../core/widgets/app_footer.dart';
+import '../../viewmodels/calendario_viewmodel.dart';
+
+class CalendarioScreen extends StatelessWidget {
   const CalendarioScreen({Key? key}) : super(key: key);
 
   @override
-  State<CalendarioScreen> createState() => _CalendarioScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => CalendarioViewModel(),
+      child: const _CalendarioContenido(),
+    );
+  }
 }
 
-class _CalendarioScreenState extends State<CalendarioScreen> {
-  final RecordatorioService _service = RecordatorioService();
+// 👇 La vista interna se vuelve StatefulWidget para manejar el TTS 👇
+class _CalendarioContenido extends StatefulWidget {
+  const _CalendarioContenido({Key? key}) : super(key: key);
 
-  DateTime _diaSeleccionado = DateTime.now();
-  DateTime _diaFocuseado    = DateTime.now();
+  @override
+  State<_CalendarioContenido> createState() => _CalendarioContenidoState();
+}
 
-  // Fechas que tienen al menos un recordatorio → puntitos del calendario
-  Set<String> _diasConEventos = {};
-
-  // Recordatorios del día seleccionado actualmente
-  List<Map<String, dynamic>> _eventosDelDiaSeleccionado = [];
-
-  bool _cargandoCalendario = true; // spinner mientras carga los puntitos
-  bool _cargandoDia        = false; // spinner mientras carga el detalle del día
-
-  // ── Helpers de formato ────────────────────────────────────────
-
-  String _formatearFecha(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  // Rango: primer día del mes anterior → último día del mes siguiente
-  (DateTime, DateTime) _rangoParaMes(DateTime mes) {
-    final desde = DateTime(mes.year, mes.month - 1, 1);
-    final hasta  = DateTime(mes.year, mes.month + 2, 0);
-    return (desde, hasta);
-  }
-
-  // ── Carga de puntitos (Lógica del amigo) ──────────────────────
-
-  Future<void> _cargarPuntitos(DateTime mes) async {
-    setState(() => _cargandoCalendario = true);
-
-    final (desde, hasta) = _rangoParaMes(mes);
-    final dias = await _service.obtenerDiasConEventos(desde, hasta);
-
-    setState(() {
-      _diasConEventos    = dias.toSet();
-      _cargandoCalendario = false;
-    });
-  }
-
-  // ── Carga del detalle del día seleccionado (Lógica del amigo) ─
-
-  Future<void> _cargarDia(DateTime dia) async {
-    setState(() {
-      _cargandoDia = true;
-      _eventosDelDiaSeleccionado = [];
-    });
-
-    final data = await _service.obtenerDia(dia);
-
-    final List<Map<String, dynamic>> eventos = [];
-    if (data != null) {
-      final franjas = data['franjas'] as Map<String, dynamic>;
-      for (final franja in ['manana', 'tarde', 'noche']) {
-        final lista = franjas[franja] as List<dynamic>? ?? [];
-        eventos.addAll(lista.map((e) => Map<String, dynamic>.from(e as Map)));
-      }
-      // Ordenar por hora ascendente
-      eventos.sort((a, b) => (a['hora'] as String).compareTo(b['hora'] as String));
-    }
-
-    setState(() {
-      _eventosDelDiaSeleccionado = eventos;
-      _cargandoDia = false;
-    });
-  }
-
-  // ── Lifecycle ─────────────────────────────────────────────────
+class _CalendarioContenidoState extends State<_CalendarioContenido> {
+  // 1. INSTANCIAMOS EL MOTOR TTS
+  final FlutterTts flutterTts = FlutterTts();
 
   @override
   void initState() {
     super.initState();
-    _cargarPuntitos(_diaFocuseado);
-    _cargarDia(_diaSeleccionado);
+    _initTts();
   }
 
-  // ── EventLoader para el TableCalendar ─────────────────────────
-  List<Object> _eventLoader(DateTime dia) {
-    return _diasConEventos.contains(_formatearFecha(dia)) ? [true] : [];
+  // 2. CONFIGURAMOS EL TTS (Idioma y Velocidad)
+  Future<void> _initTts() async {
+    await flutterTts.setLanguage("es-ES");
+    await flutterTts.setSpeechRate(0.45);
+    await flutterTts.setPitch(1.0);
   }
 
-  // ── Colores ───────────────────────────────────────────────────
+  @override
+  void dispose() {
+    // 3. DETENEMOS EL TTS SI SALE DE LA PANTALLA
+    flutterTts.stop();
+    super.dispose();
+  }
 
+  // 4. LÓGICA PARA LEER LA TARJETA
+  Future<void> _reproducirTTS(Map<String, dynamic> item) async {
+    String nombre = item['nombre'] ?? '';
+    String detalle = '';
+
+    if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
+        ((item['dosis'] ?? item['detalle']) ?? '').isNotEmpty) {
+      detalle = ((item['dosis'] ?? item['detalle']) as String).split(' — ').first;
+    }
+
+    String horaStr = item['hora'] ?? '';
+    String horaHablada = _formatearHoraParaTTS(horaStr);
+
+    String textoALeer = "$nombre. ";
+    if (detalle.isNotEmpty) {
+      textoALeer += "$detalle. ";
+    }
+    if (horaHablada.isNotEmpty) {
+      textoALeer += horaHablada;
+    }
+
+    await flutterTts.speak(textoALeer);
+  }
+
+  // 5. TRADUCTOR DE HORA (De "13:15" a lenguaje natural)
+  String _formatearHoraParaTTS(String horaStr) {
+    if (horaStr.isEmpty || !horaStr.contains(':')) return "";
+
+    List<String> partes = horaStr.split(':');
+    int hora = int.tryParse(partes[0]) ?? 0;
+    int minuto = int.tryParse(partes[1]) ?? 0;
+
+    String periodo = "de la mañana";
+    if (hora >= 12 && hora < 20) {
+      periodo = "de la tarde";
+    } else if (hora >= 20 || hora < 6) {
+      periodo = "de la noche";
+    }
+
+    int hora12 = hora % 12;
+    if (hora12 == 0) hora12 = 12;
+
+    String articulo = hora12 == 1 ? "a la" : "a las";
+    String horaTexto = hora12.toString();
+    String minutoTexto = minuto == 0 ? "en punto" : "y $minuto";
+
+    return "$articulo $horaTexto $minutoTexto $periodo";
+  }
+
+  // ── Colores (Netamente visual) ──
   Color _parsearColor(String colorStr) {
     switch (colorStr) {
       case 'verde':  return const Color(0xFFDEFFE1);
@@ -114,10 +121,10 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
+    final vm = Provider.of<CalendarioViewModel>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -146,8 +153,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             child: Column(
               children: [
 
-                // ── CALENDARIO (Con tus estilos estéticos) ─────────
-                _cargandoCalendario
+                // ── CALENDARIO ─────────
+                vm.cargandoCalendario
                     ? const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: LinearProgressIndicator(color: Color(0xFF000080)),
@@ -156,27 +163,19 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                   locale: 'es_ES',
                   firstDay: DateTime(2024),
                   lastDay: DateTime(2027),
-                  focusedDay: _diaFocuseado,
-                  selectedDayPredicate: (dia) =>
-                      isSameDay(_diaSeleccionado, dia),
-                  eventLoader: _eventLoader,
+                  focusedDay: vm.diaFocuseado,
+                  selectedDayPredicate: (dia) => isSameDay(vm.diaSeleccionado, dia),
 
-                  // Cuando cambia el mes → recargar puntitos
+                  eventLoader: (dia) => vm.tieneEventos(dia) ? [true] : [],
+
                   onPageChanged: (nuevaFecha) {
-                    _diaFocuseado = nuevaFecha;
-                    _cargarPuntitos(nuevaFecha);
+                    vm.cambiarMes(nuevaFecha);
                   },
 
-                  // Cuando toca un día → cargar detalle
                   onDaySelected: (seleccionado, focuseado) {
-                    setState(() {
-                      _diaSeleccionado = seleccionado;
-                      _diaFocuseado    = focuseado;
-                    });
-                    _cargarDia(seleccionado);
+                    vm.seleccionarDia(seleccionado, focuseado);
                   },
 
-                  // TUS ESTILOS ESTÉTICOS APLICADOS AQUÍ 👇
                   calendarStyle: CalendarStyle(
                     selectedDecoration: const BoxDecoration(
                       color: Color(0xFF000080),
@@ -250,12 +249,11 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
                 // ── DETALLE DEL DÍA SELECCIONADO ────────────
                 Expanded(
-                  child: _cargandoDia
+                  child: vm.cargandoDia
                       ? const Center(
-                    child: CircularProgressIndicator(
-                        color: Color(0xFF000080)),
+                    child: CircularProgressIndicator(color: Color(0xFF000080)),
                   )
-                      : _eventosDelDiaSeleccionado.isEmpty
+                      : vm.eventosDelDiaSeleccionado.isEmpty
                       ? const Center(
                     child: Text(
                       'No hay eventos\nprogramados',
@@ -267,15 +265,12 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     ),
                   )
                       : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 8),
-                    itemCount: _eventosDelDiaSeleccionado.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    itemCount: vm.eventosDelDiaSeleccionado.length,
                     itemBuilder: (context, index) {
-                      final item = _eventosDelDiaSeleccionado[index];
-                      final colorRelleno =
-                      _parsearColor(item['color'] ?? '');
-                      final colorBorde =
-                      _parsearBorde(item['color'] ?? '');
+                      final item = vm.eventosDelDiaSeleccionado[index];
+                      final colorRelleno = _parsearColor(item['color'] ?? '');
+                      final colorBorde = _parsearBorde(item['color'] ?? '');
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -294,51 +289,37 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 decoration: BoxDecoration(
                                   color: colorRelleno,
-                                  borderRadius:
-                                  BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: colorBorde, width: 2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: colorBorde, width: 2),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black
-                                          .withValues(alpha: 0.1),
+                                      color: Colors.black.withValues(alpha: 0.1),
                                       offset: const Offset(0, 3),
                                       blurRadius: 5,
                                     ),
                                   ],
                                 ),
                                 child: Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             item['nombre'] ?? '',
                                             style: const TextStyle(
                                               fontSize: 26,
-                                              fontWeight:
-                                              FontWeight.bold,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          if ((item['tipo'] ==
-                                              'medicamento' ||
-                                              item['tipo'] ==
-                                                  'actividad') &&
-                                              (item['detalle'] ?? '')
-                                                  .isNotEmpty)
+                                          if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
+                                              ((item['dosis'] ?? item['detalle']) ?? '').isNotEmpty)
                                             Text(
-                                              (item['detalle']
-                                              as String)
-                                                  .split(' — ')
-                                                  .first,
+                                              ((item['dosis'] ?? item['detalle']) as String).split(' — ').first,
                                               style: const TextStyle(
                                                 fontSize: 16,
                                                 color: Colors.black87,
@@ -347,9 +328,13 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                                         ],
                                       ),
                                     ),
-                                    const Icon(Icons.volume_up,
-                                        color: Colors.black,
-                                        size: 48),
+                                    // 👇 AQUÍ REEMPLAZAMOS EL ÍCONO POR UN BOTÓN 👇
+                                    IconButton(
+                                      icon: const Icon(Icons.volume_up, color: Colors.black),
+                                      iconSize: 48,
+                                      onPressed: () => _reproducirTTS(item),
+                                      tooltip: 'Escuchar recordatorio',
+                                    ),
                                   ],
                                 ),
                               ),
