@@ -171,7 +171,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 height: 135,
                 color: const Color(0xFF000080),
-                alignment: Alignment.center,
+                alignment: Alignment.topCenter,
+                padding: const EdgeInsets.only(top: 50),
                 child: const Text(
                   'Salud\nMayor',
                   textAlign: TextAlign.center,
@@ -184,19 +185,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               // Botón de Salir (Izquierda)
               Positioned(
-                top: 40,
+                top: 50,
                 left: 10,
                 child: IconButton(
-                  icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 32),
+                  icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 48),
                   onPressed: () => _handleLogout(context),
                 ),
               ),
               // 👇 NUEVO BOTÓN DE AJUSTES (Derecha) 👇
               Positioned(
-                top: 40,
+                top: 50,
                 right: 10,
                 child: IconButton(
-                  icon: const Icon(Icons.settings, color: Colors.white, size: 32),
+                  icon: const Icon(Icons.settings, color: Colors.white, size: 48),
                   tooltip: 'Configurar permisos de alarma',
                   onPressed: () {
                     Navigator.push(

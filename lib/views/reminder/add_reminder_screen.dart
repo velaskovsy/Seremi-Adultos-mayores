@@ -21,10 +21,11 @@ class AddReminderScreen extends StatelessWidget {
             width: double.infinity,
             height: 135,
             color: const Color(0xFF000080),
+            padding: const EdgeInsets.only(top: 50),
             child: Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 16),
+                  padding: const EdgeInsets.only(left: 14),
                   child: GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(

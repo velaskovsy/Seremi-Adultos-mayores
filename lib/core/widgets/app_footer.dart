@@ -65,9 +65,9 @@ class AppFooter extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          const SizedBox(height: 0),
+          const SizedBox(height: 10),
           Container(
             width: 50,
             height: 50,
@@ -84,7 +84,7 @@ class AppFooter extends StatelessWidget {
                 size: activo ? 36 : 28,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(

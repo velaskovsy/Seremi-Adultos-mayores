@@ -75,14 +75,38 @@ class NotificationService {
     );
   }
 
-  Future<void> dispararNotificacionPantallaCompleta(Map<String, dynamic> medicamento) async {
-    final Int64List patronVibracion = Int64List.fromList([0, 1000, 500, 1000]);
+  Future<void> dispararNotificacionPantallaCompleta(
+      Map<String, dynamic> item,
+      String tipoAlarma,
+      {int intento = 1}) async {
+
+    bool esAgresiva = intento >= 2;
+
+    // 1. PATRÓN SUAVE
+    final Int64List vibracionSuave = Int64List.fromList([0, 500, 1000, 500, 1000, 500]);
+
+    // 2. PATRÓN AGRESIVO
+    final Int64List vibracionAgresiva = Int64List.fromList([0, 2000, 200, 2000, 200, 3000]);
+
+    final Int64List patronElegido = esAgresiva ? vibracionAgresiva : vibracionSuave;
     final Int32List banderaInsistente = Int32List.fromList(<int>[4]);
 
+    String tituloNotificacion = (tipoAlarma == 'presion')
+        ? '¡Hora de tu medición!'
+        : '¡Hora de tu medicación!';
+
+    String cuerpoNotificacion = (tipoAlarma == 'presion')
+        ? 'Debes medirte: ${item['nombre']}'
+        : 'Debes tomar: ${item['nombre']}';
+
+    // 👇 LA MAGIA ESTÁ AQUÍ: Nombres de canales distintos 👇
+    String channelId = esAgresiva ? 'canal_agresivo_v1' : 'canal_suave_v1';
+    String channelName = esAgresiva ? 'Alarmas de Emergencia' : 'Alarmas Normales';
+
     AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'medicamentos_channel_id_v6', // 👈 _v6
-      'Recordatorios de Medicación',
-      channelDescription: 'Canal de alta prioridad para asegurar la toma de remedios',
+      channelId, // 👈 Usamos la variable dinámica
+      channelName, // 👈 Usamos la variable dinámica
+      channelDescription: 'Canal de alta prioridad para asegurar la toma',
       importance: Importance.max,
       priority: Priority.high,
       fullScreenIntent: true,
@@ -92,22 +116,21 @@ class NotificationService {
       playSound: true,
       sound: const UriAndroidNotificationSound('content://settings/system/alarm_alert'),
       enableVibration: true,
-      vibrationPattern: patronVibracion,
+      vibrationPattern: patronElegido, // 👈 Ahora sí lo va a respetar
       additionalFlags: banderaInsistente,
 
-      // MAGIA ANTI-DESLIZAMIENTO
-      ongoing: true,      // Hace que la notificación sea "fija"
-      autoCancel: false,  // Evita que desaparezca al tocarla
+      ongoing: true,
+      autoCancel: false,
     );
 
     NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
 
     await _notificationsPlugin.show(
-      id: medicamento['id'] ?? 0,
-      title: '¡Hora de tu medicación!',
-      body: 'Debes tomar: ${medicamento['nombre']}',
+      id: item['id'] ?? 0,
+      title: tituloNotificacion,
+      body: cuerpoNotificacion,
       notificationDetails: platformDetails,
-      payload: jsonEncode(medicamento),
+      payload: jsonEncode(item),
     );
   }
 

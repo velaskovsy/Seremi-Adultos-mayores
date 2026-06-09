@@ -107,7 +107,9 @@ class AlarmViewModel extends ChangeNotifier {
               }
 
               NotificationService.ultimoIdProcesado = id;
-              await _notificationService.dispararNotificacionPantallaCompleta(medicamento);
+              // ✅ usa difMinutos para escalar la intensidad
+              final int intento = difMinutos == 0 ? 1 : 2;
+              await _notificationService.dispararNotificacionPantallaCompleta(medicamento, 'medicamento', intento: intento);
 
               if (!AlarmViewModel.pantallaAlarmaAbierta) {
                 // 👇 3. CERRAMOS EL CANDADO INMEDIATAMENTE ANTES DE DIBUJAR
@@ -162,7 +164,7 @@ class AlarmViewModel extends ChangeNotifier {
 
             // 👇 EL MURO Y EL BUCLE PARA LA PRESIÓN
             // (Ojo: Lo tienes configurado en <= 1 para tus pruebas. Para producción súbelo a <= 30)
-            if (difMinutos >= 0 && difMinutos <= 1 && difMinutos % 1 == 0) {
+            if (difMinutos >= 0 && difMinutos <= 30 && difMinutos % 1 == 0) {
 
               String llaveDisparo = "${llaveUnica}_$difMinutos";
 
@@ -179,7 +181,8 @@ class AlarmViewModel extends ChangeNotifier {
               }
 
               NotificationService.ultimoIdProcesado = id;
-              await _notificationService.dispararNotificacionPantallaCompleta(medicion);
+              final int intento = difMinutos == 0 ? 1 : 2;
+              await _notificationService.dispararNotificacionPantallaCompleta(medicion, 'presion', intento: intento);
 
               // 👇 EL CANDADO
               if (!AlarmViewModel.pantallaAlarmaAbierta) {
