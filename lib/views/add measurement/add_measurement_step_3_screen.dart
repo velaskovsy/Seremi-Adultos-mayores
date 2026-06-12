@@ -133,7 +133,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Roboto',
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
@@ -147,7 +147,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                       'INSTRUCCIONES',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 20,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -162,22 +162,29 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                         border: Border.all(color: Colors.black, width: 2),
                       ),
                       child: TextField(
-                        maxLines: 4,
                         onChanged: vm.setInstrucciones,
+
+                        // 👇 CENTRADO Y MAGIA DINÁMICA 👇
+                        textAlign: TextAlign.center,
+                        minLines: 3,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 26,
                           color: Color(0xFF000080),
                           fontWeight: FontWeight.bold,
                         ),
-                        decoration: const InputDecoration(
+                        // 👇 QUITAMOS EL CONST Y AGREGAMOS TRANSPARENCIA AL HINT 👇
+                        decoration: InputDecoration(
                           hintText: 'Ej: Reposar 5 minutos antes\nde tomar la medición',
                           hintStyle: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF000080),
+                            fontSize: 26,
+                            color: const Color(0xFF000080).withValues(alpha: 0.5),
                             fontWeight: FontWeight.bold,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
                     ),
@@ -186,10 +193,10 @@ class AddMeasurementStep3Screen extends StatelessWidget {
 
                     // ── FOTO ──────────────────────────────────
                     const Text(
-                      'FOTO (Opcional)',
+                      'FOTO',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 20,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -217,7 +224,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontFamily: 'Roboto',
-                              fontSize: 16,
+                              fontSize: 24,
                               color: Colors.red,
                               fontWeight: FontWeight.bold,
                             ),
@@ -255,28 +262,28 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                             onPressed: vm.guardando
                                 ? null
                                 : () async {
-                                    final exito = await vm.guardar();
-                                    if (exito && context.mounted) {
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => const HomeScreen()),
-                                        (route) => false,
-                                      );
-                                    }
-                                  },
+                              final exito = await vm.guardar();
+                              if (exito && context.mounted) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const HomeScreen()),
+                                      (route) => false,
+                                );
+                              }
+                            },
                             child: vm.guardando
                                 ? const CircularProgressIndicator(
-                                    color: Colors.white)
+                                color: Colors.white)
                                 : const Text(
-                                    'Guardar',
-                                    style: TextStyle(
-                                      fontFamily: 'Roboto',
-                                      fontSize: 32,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              'Guardar',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 32,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),

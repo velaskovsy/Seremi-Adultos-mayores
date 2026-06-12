@@ -1,7 +1,7 @@
-// lib/views/home/home_screen.dart
+import 'dart:async'; // 👈 1. IMPORTANTE PARA EL RELOJ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_tts/flutter_tts.dart'; // 1. IMPORTAMOS EL TTS
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../core/widgets/app_footer.dart';
 import '../../services/auth_service.dart';
@@ -10,10 +10,12 @@ import '../../viewmodels/alarma_medicacion_viewmodel.dart';
 
 import '../login/login_screen.dart';
 import '../reminder/add_reminder_screen.dart';
-import '../editar o eliminar recordatorio/detalle_medicamento_screen.dart'; // Ajusta la ruta a donde la hayas guardado
-
+import '../editar o eliminar recordatorio/detalle_medicamento_screen.dart';
+import '../editar o eliminar recordatorio/detalle_medicion_screen.dart';
+import '../editar o eliminar recordatorio/detalle_actividad_screen.dart';
+import '../editar o eliminar recordatorio/detalle_cita_medica_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../configuracion/permisos_screen.dart'; // Ajusta la ruta según dónde la guardaste
+import '../configuracion/permisos_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -26,8 +28,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late HomeViewModel vm;
 
-  // 2. INSTANCIAMOS EL MOTOR TTS
   final FlutterTts flutterTts = FlutterTts();
+
+  // 👇 2. CREAMOS LA VARIABLE DEL RELOJ
+  Timer? _relojTimer;
 
   @override
   void initState() {
@@ -39,15 +43,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     vm.cargar();
 
-    // 👇 AQUÍ AGREGAMOS EL ASYNC Y LA REVISIÓN DE PERMISOS 👇
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       Provider.of<AlarmViewModel>(context, listen: false).iniciarMonitoreoDeAlarmas();
 
-      // Revisamos en silencio si los permisos vitales están activos
       final notificaciones = await Permission.notification.isGranted;
       final bateria = await Permission.ignoreBatteryOptimizations.isGranted;
 
-      // Si falta alguno, empujamos al usuario a la pantalla de configuración
       if (!notificaciones || !bateria) {
         if (mounted) {
           Navigator.push(
@@ -58,31 +59,41 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    // Inicializamos las configuraciones del TTS
     _initTts();
+
+    // 👇 3. ENCENDEMOS EL RELOJ PARA QUE ACTUALICE LA PANTALLA CADA SEGUNDO
+    _relojTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) setState(() {});
+    });
   }
 
-  // 3. CONFIGURAMOS EL TTS (Idioma y Velocidad)
   Future<void> _initTts() async {
-    await flutterTts.setLanguage("es-ES"); // Español
-    await flutterTts.setSpeechRate(0.45); // Velocidad ligeramente más lenta para el adulto mayor
+    await flutterTts.setLanguage("es-ES");
+    await flutterTts.setSpeechRate(0.45);
     await flutterTts.setPitch(1.0);
   }
 
   @override
   void dispose() {
+    // 👇 4. APAGAMOS EL RELOJ AL SALIR DE LA PANTALLA PARA NO GASTAR BATERÍA
+    _relojTimer?.cancel();
+
     try {
       Provider.of<AlarmViewModel>(context, listen: false).detenerMonitoreo();
     } catch (e) {
       debugPrint("No se pudo detener el monitoreo: $e");
     }
-    flutterTts.stop(); // Detenemos el audio si se sale de la pantalla
+    flutterTts.stop();
     super.dispose();
   }
 
-  // 4. LÓGICA PARA LEER LA TARJETA
   Future<void> _reproducirTTS(Map<String, dynamic> item) async {
     String nombre = item['nombre'] ?? '';
+
+    if (item['tipo'] == 'cita' || item['tipo'] == 'cita_medica') {
+      nombre = 'Cita Médica';
+    }
+
     String detalle = '';
 
     if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
@@ -93,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
     String horaStr = item['hora'] ?? '';
     String horaHablada = _formatearHoraParaTTS(horaStr);
 
-    // Construimos la frase final: "Paracetamol, 1 pastilla, a la una y quince de la tarde"
     String textoALeer = "$nombre. ";
     if (detalle.isNotEmpty) {
       textoALeer += "$detalle. ";
@@ -105,7 +115,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await flutterTts.speak(textoALeer);
   }
 
-  // 5. TRADUCTOR DE HORA (De "13:15" a lenguaje natural)
   String _formatearHoraParaTTS(String horaStr) {
     if (horaStr.isEmpty || !horaStr.contains(':')) return "";
 
@@ -136,6 +145,14 @@ class _HomeScreenState extends State<HomeScreen> {
     const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
     return '${dias[ahora.weekday - 1]}, ${ahora.day} de ${meses[ahora.month - 1]}';
+  }
+
+  // 👇 5. FUNCIÓN PARA OBTENER LA HORA ACTUAL EN FORMATO 00:00
+  String _obtenerHoraActual() {
+    final ahora = DateTime.now();
+    final hora = ahora.hour.toString().padLeft(2, '0');
+    final minuto = ahora.minute.toString().padLeft(2, '0');
+    return '$hora:$minuto';
   }
 
   Future<void> _handleLogout(BuildContext context) async {
@@ -183,7 +200,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              // Botón de Salir (Izquierda)
               Positioned(
                 top: 50,
                 left: 10,
@@ -192,7 +208,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => _handleLogout(context),
                 ),
               ),
-              // 👇 NUEVO BOTÓN DE AJUSTES (Derecha) 👇
               Positioned(
                 top: 50,
                 right: 10,
@@ -207,7 +222,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-              // 👆 FIN DE NUEVO BOTÓN 👆
             ],
           ),
 
@@ -223,6 +237,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       _obtenerFecha(),
                       style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+
+                  // 👇 6. AQUÍ DIBUJAMOS EL RELOJ EN VIVO
+                  Center(
+                    child: Text(
+                      _obtenerHoraActual(),
+                      style: const TextStyle(
+                        fontSize: 48, // Bien grande y legible
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF000080), // Azul oscuro
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -251,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // BOTÓN AÑADIR RECORDATORIO
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0), // Margen para que no toque los bordes
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
@@ -293,8 +319,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Text(
                                   'AÑADIR RECORDATORIO',
                                   style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
-                                  textAlign: TextAlign.center, // Centra si salta de línea
-                                  maxLines: 2, // Permite que se acomode en 2 líneas en celulares chicos
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -311,16 +337,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 17),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // 1. Centra todo el grupo (Icono + Texto)
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
                         Icon(Icons.access_time, color: Color(0xFF000080), size: 38),
                         SizedBox(width: 10),
-                        // 👇 2. Flexible permite que salte de línea, pero sin separarse del icono
                         Flexible(
                           child: Text(
                             'HORARIO DEL DÍA',
                             style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center, // 3. Centra las palabras si se parten en dos líneas
+                            textAlign: TextAlign.center,
                             maxLines: 2,
                           ),
                         ),
@@ -451,6 +476,11 @@ class _HomeScreenState extends State<HomeScreen> {
         colorRelleno = const Color(0xFFE0E0E0);
     }
 
+    String nombreAMostrar = item['nombre'] ?? '';
+    if (item['tipo'] == 'cita' || item['tipo'] == 'cita_medica') {
+      nombreAMostrar = 'Cita Médica';
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 8),
       child: Row(
@@ -474,21 +504,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Tarjeta Clickeable
           Expanded(
-            // 👇 1. ENVOLVEMOS EL CONTAINER CON GESTURE DETECTOR 👇
             child: GestureDetector(
               onTap: () {
-                // 👇 2. LÓGICA DE NAVEGACIÓN 👇
                 if (item['tipo'] == 'medicamento') {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      // Pasamos el 'item' completo a la nueva pantalla
                       builder: (_) => DetalleMedicamentoScreen(medicamento: item),
                     ),
                   );
+                } else if (item['tipo'] == 'medicion' || item['tipo'] == 'medición') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetalleMedicionScreen(medicion: item),
+                    ),
+                  );
+                } else if (item['tipo'] == 'actividad') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetalleActividadScreen(actividad: item),
+                    ),
+                  );
+                } else if (item['tipo'] == 'cita' || item['tipo'] == 'cita_medica') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetalleCitaMedicaScreen(cita: item),
+                    ),
+                  );
                 } else {
-                  // Aquí tu equipo podrá agregar la navegación para las otras pantallas
-                  // ej: builder: (_) => DetalleActividadScreen(actividad: item)
                   print('Tocado un evento de tipo: ${item['tipo']}');
                 }
               },
@@ -501,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   border: Border.all(color: colorBorde, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2), // Corrección recomendada para compatibilidad
+                      color: Colors.black.withOpacity(0.2),
                       offset: const Offset(0, 4),
                       blurRadius: 6,
                     ),
@@ -515,7 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item['nombre'] ?? '',
+                            nombreAMostrar,
                             style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
@@ -536,7 +582,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                    // El botón de TTS que configuramos antes
                     Padding(
                       padding: const EdgeInsets.only(top: 20),
                       child: IconButton(
@@ -546,7 +591,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         tooltip: 'Escuchar recordatorio',
                       ),
                     ),
-
                   ],
                 ),
               ),

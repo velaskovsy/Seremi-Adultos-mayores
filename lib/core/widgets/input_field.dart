@@ -5,12 +5,14 @@ class InputField extends StatelessWidget {
   final String label;
   final String hint;
   final bool isPassword;
-  final bool passwordVisible; // Solo se usa si isPassword es true
-  final String? errorText; // Muestra error debajo del campo
+  final bool passwordVisible;
+  final String? errorText;
   final Function(String) onChanged;
-  final VoidCallback? onToggleVisibility; // Solo se usa si isPassword es true
+  final VoidCallback? onToggleVisibility;
   final double verticalPadding;
   final double hintFontSize;
+  final double labelFontSize;
+  final double labelLeftPadding;
   final TextInputType keyboardType;
   final List<TextInputFormatter>? inputFormatters;
 
@@ -25,6 +27,8 @@ class InputField extends StatelessWidget {
     this.onToggleVisibility,
     this.verticalPadding = 28,
     this.hintFontSize = 32,
+    this.labelFontSize = 24,
+    this.labelLeftPadding = 34,
     this.keyboardType = TextInputType.text,
     this.inputFormatters,
   }) : super(key: key);
@@ -36,12 +40,12 @@ class InputField extends StatelessWidget {
       children: [
         // Etiqueta encima del campo
         Padding(
-          padding: const EdgeInsets.only(left: 34, bottom: 8),
+          padding: EdgeInsets.only(left: labelLeftPadding, bottom: 8),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Roboto',
-              fontSize: 24,
+              fontSize: labelFontSize,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
@@ -52,7 +56,8 @@ class InputField extends StatelessWidget {
         Center(
           child: Container(
             width: 344,
-            height: 95,
+            // 👇 1. ¡CERO ALTURAS FIJAS! Borramos el height y el constraints.
+            // Ahora el texto es el que manda sobre el tamaño del cuadro.
             decoration: BoxDecoration(
               color: const Color(0xFFE0E0E0),
               borderRadius: BorderRadius.circular(15),
@@ -60,16 +65,21 @@ class InputField extends StatelessWidget {
             ),
             child: TextField(
               obscureText: isPassword && !passwordVisible,
-              textAlign: TextAlign.center,
-              keyboardType: isPassword ? TextInputType.number : keyboardType,
 
-              // 👇 AQUÍ ESTÁ LA MAGIA CORREGIDA
+              // 👇 2. LA MAGIA DEL CRECIMIENTO DINÁMICO 👇
+              minLines: 1, // Nace delgadito (1 sola línea)
+              maxLines: isPassword ? 1 : null, // Crece infinitamente hacia abajo a medida que escriben
+
+              textAlign: TextAlign.center,
+              // Le ponemos multiline para que el teclado de Android les muestre la tecla "Enter"
+              keyboardType: isPassword ? TextInputType.number : TextInputType.multiline,
+
               inputFormatters: isPassword
                   ? [
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(4),
               ]
-                  : inputFormatters, // 👈 Se reemplazó el [] por la variable
+                  : inputFormatters,
 
               style: const TextStyle(
                 fontSize: 32,
@@ -86,6 +96,7 @@ class InputField extends StatelessWidget {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
+                  // El verticalPadding le dará el "grosor" base para que no se vea aplastado al nacer
                   vertical: verticalPadding,
                 ),
                 suffixIcon: isPassword

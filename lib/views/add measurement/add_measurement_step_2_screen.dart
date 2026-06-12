@@ -151,8 +151,9 @@ class AddMeasurementStep2Screen extends StatelessWidget {
                             'El recordatorio se repetirá\ncada 24 horas con las\nhoras ingresadas',
                             style: TextStyle(
                               fontFamily: 'Roboto',
-                              fontSize: 20,
+                              fontSize: 22,
                               color: Colors.black54,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),

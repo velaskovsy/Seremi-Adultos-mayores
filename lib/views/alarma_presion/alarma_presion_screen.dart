@@ -1,11 +1,12 @@
-import 'dart:async'; //IMPORTAMOS EL TEMPORIZADOR
+// lib/views/alarma_presion/alarma_medicion_screen.dart (o la ruta donde lo tengas)
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../services/voice_service.dart';
+
 import '../../services/notificacion_service.dart';
 import '../../viewmodels/alarma_medicacion_viewmodel.dart'; // IMPORTAMOS EL VIEWMODEL PARA EL CANDADO
 
-//  IMPORTACIÓN DE TU PANTALLA DE REGISTRO DE PRESIÓN POST-ALARMA
-import '../add measurement/add_measurement_presion_after_alarm.dart';
+// 👇 IMPORTAMOS LA NUEVA PANTALLA PACÍFICA DE INSTRUCCIONES 👇
+import '../Instrucciones/instrucciones_medicion_screen.dart';
 
 class AlarmaMedicionScreen extends StatefulWidget {
   final Map<String, dynamic> medicion;
@@ -17,10 +18,11 @@ class AlarmaMedicionScreen extends StatefulWidget {
 }
 
 class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
-  final VoiceService _voiceService = VoiceService();
-
   // VARIABLE DEL RELOJ DE ARENA
   Timer? _autoCloseTimer;
+
+  // 👇 BANDERA PARA PROTEGER EL CANDADO AL CAMBIAR DE PANTALLA 👇
+  bool _goingToInstructions = false;
 
   @override
   void initState() {
@@ -28,8 +30,6 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
 
     // CERRAMOS EL CANDADO
     AlarmViewModel.pantallaAlarmaAbierta = true;
-
-    _dispararVozGuia();
 
     // INICIAMOS LA CUENTA REGRESIVA DE 59 SEGUNDOS
     _autoCloseTimer = Timer(const Duration(seconds: 59), () {
@@ -40,23 +40,18 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
     });
   }
 
-  void _dispararVozGuia() async {
-    final String nombre = widget.medicion['nombre'] ?? 'Mídase la presión';
-    final String detalle = widget.medicion['detalle'] ?? 'Instrumento';
-
-    await _voiceService.init();
-    await _voiceService.hablar("Atención. ¡Hora de tu alarma! Es momento de: $nombre. Instrucciones $detalle.");
-  }
-
   @override
   void dispose() {
-    // ABRIMOS EL CANDADO
-    AlarmViewModel.pantallaAlarmaAbierta = false;
-
     // MATAMOS EL RELOJ
     _autoCloseTimer?.cancel();
 
-    _voiceService.detener();
+    // 👇 PROTEGEMOS EL CANDADO SI VAMOS A LAS INSTRUCCIONES 👇
+    if (!_goingToInstructions) {
+      AlarmViewModel.pantallaAlarmaAbierta = false;
+      print("🔒 Candado abierto porque la alarma expiró o se cerró sin atender.");
+    } else {
+      print("🛡️ Candado protegido. El control de la presión pasa a la pantalla de instrucciones.");
+    }
 
     // SOLUCIÓN AL AUDIO FANTASMA
     NotificationService().apagarAlarmas();
@@ -69,7 +64,7 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
     final String hora = widget.medicion['hora'] ?? '--:--';
     final String nombre = widget.medicion['nombre'] ?? 'MÍDASE LA PRESIÓN';
     final String detalle = widget.medicion['detalle'] ?? 'Instrumento';
-    final String? urlFoto = widget.medicion['url_foto_remedio'];
+    final String? urlFoto = widget.medicion['url_foto_remedio']; // Ojo si tu variable se llama distinto para presión
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFC5C5),
@@ -83,7 +78,7 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
               Column(
                 children: [
                   const SizedBox(height: 20),
-                  const Icon(Icons.error_outline, color: Colors.red, size: 80),
+                  const Icon(Icons.notifications_active, color: Colors.red, size: 80),
                   const SizedBox(height: 10),
                   const Text(
                     '¡ALARMA!',
@@ -152,39 +147,31 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
               ),
 
               // =========================================================
-              // BOTÓN VERDE "YA LA MEDÍ"
+              // BOTÓN VERDE "ATENDER RECORDATORIO"
               // =========================================================
               SizedBox(
                 width: double.infinity,
-                height: 65,
+                height: 80, // Lo hice un poco más alto para accesibilidad
                 child: ElevatedButton(
-                  onPressed: () async {
-                    // 👇 1. AGREGAMOS LA PRESIÓN A LA LISTA NEGRA DEL RADAR
+                  onPressed: () {
+                    // 👇 1. AGREGAMOS LA PRESIÓN A LA LISTA NEGRA DEL RADAR INMEDIATAMENTE 👇
                     final int id = widget.medicion['id'] ?? 0;
                     AlarmViewModel.alarmasSilenciadas.add("presion_$id");
 
-                    print('=====================================');
-                    print('🕵️‍♂️ DATOS DE LA NOTIFICACIÓN QUE TOCASTE:');
-                    print(widget.medicion);
-                    print('=====================================');
+                    // 2. ACTIVAMOS LA BANDERA PARA NO ABRIR EL CANDADO AL MORIR
+                    setState(() {
+                      _goingToInstructions = true;
+                    });
 
-                    String tipoRecibido = widget.medicion['tipo']?.toString().toLowerCase() ?? '';
-                    String detalleRecibido = widget.medicion['detalle']?.toString().toLowerCase() ?? '';
-                    String nombreRecibido = widget.medicion['nombre']?.toString().toLowerCase() ?? '';
+                    // 3. MATAMOS EL TEMPORIZADOR DE ESTA PANTALLA
+                    _autoCloseTimer?.cancel();
 
-                    bool esRep = tipoRecibido.contains('repetic') ||
-                        detalleRecibido.contains('repetic') ||
-                        nombreRecibido.contains('repetic');
-
-                    _voiceService.detener();
-                    await NotificationService().apagarAlarmas();
-
-                    // 4. VIAJAMOS A LA SIGUIENTE PANTALLA
+                    // 👇 4. VIAJAMOS A LA PANTALLA PACÍFICA DE INSTRUCCIONES 👇
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => AddMeasurementPresionAfterAlarm(
-                          esRepeticion: esRep,
+                        builder: (_) => InstruccionPresionScreen(
+                          medicion: widget.medicion,
                         ),
                       ),
                     );
@@ -195,7 +182,8 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                     elevation: 3,
                   ),
                   child: const Text(
-                    'YA LA MEDÍ',
+                    'ATENDER\nRECORDATORIO',
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),

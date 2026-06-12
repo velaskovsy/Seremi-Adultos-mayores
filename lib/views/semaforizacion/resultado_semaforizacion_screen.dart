@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 // 👇 IMPORTACIONES NECESARIAS 👇
 import '../../services/notificacion_service.dart';
-import '../../services/medicion_service.dart'; // Importamos el servicio directo
+import '../../services/medicion_service.dart';
 import '../alarma_presion/alerta_critica_presion_alta.dart';
 import '../home/home_screen.dart';
 
 class ResultadoMedicionScreen extends StatelessWidget {
   final String presionString;
-  final bool esRepeticion; // <--- 1. NUEVO PARÁMETRO PARA EL PROTOCOLO MÉDICO
+  final bool esRepeticion;
+  final String instruccionesOriginales; // 👈 Corrección de sintaxis para el parámetro
 
   const ResultadoMedicionScreen({
     Key? key,
     required this.presionString,
-    this.esRepeticion = false, required String instruccionesOriginales, // <--- 2. POR DEFECTO ES FALSO (Primera medición)
+    this.esRepeticion = false,
+    this.instruccionesOriginales = '',
   }) : super(key: key);
 
   @override
@@ -40,7 +41,6 @@ class ResultadoMedicionScreen extends StatelessWidget {
       iconData = Icons.error_outline;
       titulo = '¡ALERTA\nCRÍTICA!';
       mensaje = 'Siéntese y repose por 30 minutos. Evite tomar café o agitarse. Si no baja avise a su cuidador';
-      // Si ya reposó, el botón cambia de texto para tener sentido
       textoBoton = esRepeticion ? 'VER OPCIONES DE EMERGENCIA' : 'REPETIR MEDICIÓN\nEN 30 MINUTOS';
     } else if (sistolica >= 140 || diastolica >= 90) {
       esElevado = true;
@@ -72,7 +72,25 @@ class ResultadoMedicionScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   Icon(iconData, color: statusColor, size: 90),
                   const SizedBox(height: 10),
-                  Text(titulo, textAlign: TextAlign.center, style: TextStyle(color: statusColor, fontSize: 32, fontWeight: FontWeight.bold)),
+                  Text(
+                      titulo,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: statusColor, fontSize: 32, fontWeight: FontWeight.bold)
+                  ),
+
+                  // 👇 EL COMODÍN DE RECORDATORIO DE REMEDIO SÓLO PARA ALTA O CRÍTICA 👇
+                  if (esCritico || esElevado) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      '¿Recordaste tomarte tu remedio?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
                 ],
               ),
               Card(
@@ -102,10 +120,7 @@ class ResultadoMedicionScreen extends StatelessWidget {
                   onPressed: () async {
                     try {
                       if (esCritico || esElevado) {
-
-                        // 👇 3. AQUÍ ESTÁ LA LÓGICA DE LA ENFERMERA 👇
                         if (esRepeticion) {
-                          // Ya reposó y sigue alto: ¡A EMERGENCIAS!
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
@@ -115,31 +130,25 @@ class ResultadoMedicionScreen extends StatelessWidget {
                             ),
                           );
                         } else {
-                          // Es la primera vez que sale alto: PROGRAMAR ALARMA Y AL HOME
                           final int minutosEspera = 1; // Cambiar a 30 para producción
                           final nuevaHora = DateTime.now().add(Duration(minutes: minutosEspera));
                           final horaStr = '${nuevaHora.hour.toString().padLeft(2, '0')}:${nuevaHora.minute.toString().padLeft(2, '0')}';
 
-                          // 1. Notificación local (la alarma que suena)
                           await NotificationService().programarRepeticionPresion({
                             'hora_original': DateTime.now().toString(),
-                              'tipo': 'medicion_repeticion',
-                              'nombre': 'Control de Presión',
-                              'detalle': 'Segunda medición',
-                              },
-                              minutosEspera
-                          );
+                            'tipo': 'medicion_repeticion',
+                            'nombre': 'Control de Presión',
+                            'detalle': 'Segunda medición',
+                          }, minutosEspera);
 
-                          // 2. Registro en Base de Datos (la tarjeta en el Home)
                           final MedicionService service = MedicionService();
                           await service.crearMedicion(
-                            tipoMedicion: 'Presión arterial (Repetición)', // <--- Nombre corregido
+                            tipoMedicion: 'Presión arterial (Repetición)',
                             horas: [horaStr],
                             fecha: DateTime.now(),
                             instrucciones: 'Recordatorio automático de repetición',
                           );
 
-                          // 3. Navegación al Home para descansar
                           Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -147,7 +156,6 @@ class ResultadoMedicionScreen extends StatelessWidget {
                           );
                         }
                       } else {
-                        // VERDE: Todo bien, al Home
                         Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
                       }
                     } catch (e) {
@@ -158,8 +166,13 @@ class ResultadoMedicionScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: (!esCritico && !esElevado) ? const Color(0xFF1AA23A) : (esCritico ? Colors.red : Colors.orange),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 4, // 👈 SOMBRITA AL BOTÓN
                   ),
-                  child: Text(textoBoton, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: Text(
+                      textoBoton,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white) // 👈 BOLD AL TEXTO
+                  ),
                 ),
               ),
             ],

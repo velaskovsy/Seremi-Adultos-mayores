@@ -2,10 +2,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:flutter_tts/flutter_tts.dart'; // 👈 IMPORTACIÓN DEL TTS
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../core/widgets/app_footer.dart';
 import '../../viewmodels/calendario_viewmodel.dart';
+
+// 👇 IMPORTAMOS LAS PANTALLAS DE DETALLE 👇
+import '../editar o eliminar recordatorio/detalle_medicamento_screen.dart';
+import '../editar o eliminar recordatorio/detalle_medicion_screen.dart';
+import '../editar o eliminar recordatorio/detalle_actividad_screen.dart';
+import '../editar o eliminar recordatorio/detalle_cita_medica_screen.dart';
 
 class CalendarioScreen extends StatelessWidget {
   const CalendarioScreen({Key? key}) : super(key: key);
@@ -19,7 +25,6 @@ class CalendarioScreen extends StatelessWidget {
   }
 }
 
-// 👇 La vista interna se vuelve StatefulWidget para manejar el TTS 👇
 class _CalendarioContenido extends StatefulWidget {
   const _CalendarioContenido({Key? key}) : super(key: key);
 
@@ -28,7 +33,6 @@ class _CalendarioContenido extends StatefulWidget {
 }
 
 class _CalendarioContenidoState extends State<_CalendarioContenido> {
-  // 1. INSTANCIAMOS EL MOTOR TTS
   final FlutterTts flutterTts = FlutterTts();
 
   @override
@@ -37,7 +41,6 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
     _initTts();
   }
 
-  // 2. CONFIGURAMOS EL TTS (Idioma y Velocidad)
   Future<void> _initTts() async {
     await flutterTts.setLanguage("es-ES");
     await flutterTts.setSpeechRate(0.45);
@@ -46,14 +49,17 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
 
   @override
   void dispose() {
-    // 3. DETENEMOS EL TTS SI SALE DE LA PANTALLA
     flutterTts.stop();
     super.dispose();
   }
 
-  // 4. LÓGICA PARA LEER LA TARJETA
   Future<void> _reproducirTTS(Map<String, dynamic> item) async {
+    // 👇 AJUSTE AQUÍ TAMBIÉN PARA QUE LA VOZ DIGA "CITA MÉDICA" 👇
     String nombre = item['nombre'] ?? '';
+    if (item['tipo'] == 'cita' || item['tipo'] == 'cita_medica') {
+      nombre = 'Cita Médica';
+    }
+
     String detalle = '';
 
     if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
@@ -75,7 +81,6 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
     await flutterTts.speak(textoALeer);
   }
 
-  // 5. TRADUCTOR DE HORA (De "13:15" a lenguaje natural)
   String _formatearHoraParaTTS(String horaStr) {
     if (horaStr.isEmpty || !horaStr.contains(':')) return "";
 
@@ -100,7 +105,6 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
     return "$articulo $horaTexto $minutoTexto $periodo";
   }
 
-  // ── Colores (Netamente visual) ──
   Color _parsearColor(String colorStr) {
     switch (colorStr) {
       case 'verde':  return const Color(0xFFDEFFE1);
@@ -129,8 +133,6 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-
-          // ── HEADER ──────────────────────────────────────────
           Container(
             width: double.infinity,
             height: 135,
@@ -147,13 +149,9 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
               ),
             ),
           ),
-
-          // ── CONTENIDO ───────────────────────────────────────
           Expanded(
             child: Column(
               children: [
-
-                // ── CALENDARIO ─────────
                 vm.cargandoCalendario
                     ? const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
@@ -165,17 +163,13 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
                   lastDay: DateTime(2027),
                   focusedDay: vm.diaFocuseado,
                   selectedDayPredicate: (dia) => isSameDay(vm.diaSeleccionado, dia),
-
                   eventLoader: (dia) => vm.tieneEventos(dia) ? [true] : [],
-
                   onPageChanged: (nuevaFecha) {
                     vm.cambiarMes(nuevaFecha);
                   },
-
                   onDaySelected: (seleccionado, focuseado) {
                     vm.seleccionarDia(seleccionado, focuseado);
                   },
-
                   calendarStyle: CalendarStyle(
                     selectedDecoration: const BoxDecoration(
                       color: Color(0xFF000080),
@@ -244,10 +238,7 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
                     ),
                   ),
                 ),
-
                 const Divider(color: Colors.black26, thickness: 1),
-
-                // ── DETALLE DEL DÍA SELECCIONADO ────────────
                 Expanded(
                   child: vm.cargandoDia
                       ? const Center(
@@ -272,6 +263,12 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
                       final colorRelleno = _parsearColor(item['color'] ?? '');
                       final colorBorde = _parsearBorde(item['color'] ?? '');
 
+                      // 👇 1. LÓGICA DE NOMBRE VISUAL 👇
+                      String nombreAMostrar = item['nombre'] ?? '';
+                      if (item['tipo'] == 'cita' || item['tipo'] == 'cita_medica') {
+                        nombreAMostrar = 'Cita Médica';
+                      }
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Row(
@@ -288,54 +285,91 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: colorRelleno,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: colorBorde, width: 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.1),
-                                      offset: const Offset(0, 3),
-                                      blurRadius: 5,
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item['nombre'] ?? '',
-                                            style: const TextStyle(
-                                              fontSize: 26,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
-                                              ((item['dosis'] ?? item['detalle']) ?? '').isNotEmpty)
+                              // 👇 2. ENVOLVEMOS CON GESTURE DETECTOR PARA NAVEGAR 👇
+                              child: GestureDetector(
+                                onTap: () {
+                                  // 👇 LÓGICA DE NAVEGACIÓN IDÉNTICA AL HOME 👇
+                                  if (item['tipo'] == 'medicamento') {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DetalleMedicamentoScreen(medicamento: item),
+                                      ),
+                                    );
+                                  } else if (item['tipo'] == 'medicion' || item['tipo'] == 'medición') {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DetalleMedicionScreen(medicion: item),
+                                      ),
+                                    );
+                                  } else if (item['tipo'] == 'actividad') {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DetalleActividadScreen(actividad: item),
+                                      ),
+                                    );
+                                  } else if (item['tipo'] == 'cita' || item['tipo'] == 'cita_medica') {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DetalleCitaMedicaScreen(cita: item),
+                                      ),
+                                    );
+                                  } else {
+                                    print('Tocado un evento de tipo desconocido en calendario: ${item['tipo']}');
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: colorRelleno,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: colorBorde, width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.1),
+                                        offset: const Offset(0, 3),
+                                        blurRadius: 5,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
                                             Text(
-                                              ((item['dosis'] ?? item['detalle']) as String).split(' — ').first,
+                                              nombreAMostrar, // 👇 USAMOS EL NOMBRE CORREGIDO 👇
                                               style: const TextStyle(
-                                                fontSize: 16,
-                                                color: Colors.black87,
+                                                fontSize: 26,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
-                                        ],
+                                            if ((item['tipo'] == 'medicamento' || item['tipo'] == 'actividad') &&
+                                                ((item['dosis'] ?? item['detalle']) ?? '').isNotEmpty)
+                                              Text(
+                                                ((item['dosis'] ?? item['detalle']) as String).split(' — ').first,
+                                                style: const TextStyle(
+                                                  fontSize: 24,
+                                                  color: Color(0xFF000080),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    // 👇 AQUÍ REEMPLAZAMOS EL ÍCONO POR UN BOTÓN 👇
-                                    IconButton(
-                                      icon: const Icon(Icons.volume_up, color: Colors.black),
-                                      iconSize: 48,
-                                      onPressed: () => _reproducirTTS(item),
-                                      tooltip: 'Escuchar recordatorio',
-                                    ),
-                                  ],
+                                      IconButton(
+                                        icon: const Icon(Icons.volume_up, color: Colors.black),
+                                        iconSize: 48,
+                                        onPressed: () => _reproducirTTS(item),
+                                        tooltip: 'Escuchar recordatorio',
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -348,8 +382,6 @@ class _CalendarioContenidoState extends State<_CalendarioContenido> {
               ],
             ),
           ),
-
-          // ── FOOTER ──────────────────────────────────────────
           const AppFooter(paginaActual: 1),
         ],
       ),

@@ -168,7 +168,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
           tileColor: estaConcedido ? Colors.green.shade50 : Colors.red.shade50,
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           leading: Icon(icono, size: 40, color: estaConcedido ? Colors.green : Colors.red),
-          title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 27)),
+          title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 25)),
           subtitle: Text(descripcion, style : const TextStyle(fontSize: 22)),
           trailing: estaConcedido
               ? const Icon(Icons.check_circle, color: Colors.green, size: 50)

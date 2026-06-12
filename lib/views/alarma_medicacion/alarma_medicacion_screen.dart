@@ -1,11 +1,10 @@
 // lib/views/alarma_medicacion/alarma_medicacion_screen.dart
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
-import 'dart:async'; // 👈 1. IMPORTAMOS EL TEMPORIZADOR
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../services/voice_service.dart';
+
 import '../../services/notificacion_service.dart';
-import '../../viewmodels/alarma_medicacion_viewmodel.dart'; // 👈 1. IMPORTAMOS EL RADAR PARA LA LISTA NEGRA
+import '../../viewmodels/alarma_medicacion_viewmodel.dart';
+import '../Instrucciones/instrucciones_medicamento_screen.dart';
 
 class AlarmScreen extends StatefulWidget {
   final Map<String, dynamic> medicamento;
@@ -17,24 +16,20 @@ class AlarmScreen extends StatefulWidget {
 }
 
 class _AlarmScreenState extends State<AlarmScreen> {
-  final VoiceService _voiceService = VoiceService();
-
-  // 👇 2. VARIABLE DEL RELOJ DE ARENA
+  // VARIABLE DEL RELOJ DE ARENA
   Timer? _autoCloseTimer;
+
+  // Una bandera para controlar si vamos a la otra pantalla o si se cerró por tiempo
+  bool _goingToInstructions = false;
 
   @override
   void initState() {
     super.initState();
 
-    // 👇 1. CERRAMOS EL CANDADO (Para que el radar no apile otra)
+    // CERRAMOS EL CANDADO al iniciar
     AlarmViewModel.pantallaAlarmaAbierta = true;
 
-    // 🔥 Captura el momento exacto en que la pantalla aparece y habla
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _reproducirAlarmaPorVoz();
-    });
-
-    // 👇 2. INICIAMOS LA CUENTA REGRESIVA DE 59 SEGUNDOS
+    // INICIAMOS LA CUENTA REGRESIVA DE 59 SEGUNDOS
     _autoCloseTimer = Timer(const Duration(seconds: 59), () {
       if (mounted) {
         print("⏳ El usuario no contestó en 60 segundos. Cerrando pantalla para permitir reintento...");
@@ -45,31 +40,21 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
   @override
   void dispose() {
-    // ABRIMOS EL CANDADO (Para liberar al radar de nuevo)
-    AlarmViewModel.pantallaAlarmaAbierta = false;
-
-    // MATAMOS EL RELOJ SI LA PANTALLA SE CIERRA MANUALMENTE
+    // MATAMOS EL RELOJ
     _autoCloseTimer?.cancel();
 
-    // Si la pantalla se destruye, matamos la IA
-    _voiceService.detener();
+    // Si la pantalla muere porque nos fuimos a las instrucciones, NO tocamos el candado.
+    if (!_goingToInstructions) {
+      AlarmViewModel.pantallaAlarmaAbierta = false;
+      print("🔒 Candado abierto porque la alarma expiró o se cerró sin atender.");
+    } else {
+      print("🛡️ Candado protegido. El control pasa a la pantalla de instrucciones.");
+    }
 
-    // 👇 LA SOLUCIÓN AL AUDIO FANTASMA: Apagamos el ruido de Android si se acaba el tiempo
+    // Apagamos el ruido de Android
     NotificationService().apagarAlarmas();
 
     super.dispose();
-  }
-
-  void _reproducirAlarmaPorVoz() {
-    final String nombre        = widget.medicamento['nombre']        ?? 'Medicamento';
-    final String dosis         = widget.medicamento['dosis'] ?? '';
-    final String instrucciones = widget.medicamento['instrucciones'] ?? '';
-
-    String mensaje = "Atención. Es hora de tomar tu medicamento: $nombre. ";
-    if (dosis.trim().isNotEmpty)         mensaje += "Dosis: $dosis. ";
-    if (instrucciones.trim().isNotEmpty) mensaje += "Instrucciones: $instrucciones.";
-
-    _voiceService.hablar(mensaje);
   }
 
   @override
@@ -77,12 +62,11 @@ class _AlarmScreenState extends State<AlarmScreen> {
     final String hora          = widget.medicamento['hora']          ?? '--:--';
     final String nombre        = widget.medicamento['nombre']        ?? 'Medicamento';
     final String dosis         = widget.medicamento['dosis'] ?? '';
-    final String instrucciones = widget.medicamento['instrucciones'] ?? '';
     final String? urlCaja      = widget.medicamento['url_foto_caja'];
     final String? urlRemedio   = widget.medicamento['url_foto_remedio'];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFC5C5), // Fondo rosado
+      backgroundColor: const Color(0xFFFFC5C5),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
@@ -93,7 +77,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
               Column(
                 children: [
                   const SizedBox(height: 20),
-                  const Icon(Icons.error_outline, color: Colors.red, size: 80),
+                  const Icon(Icons.notifications_active, color: Colors.red, size: 80),
                   const SizedBox(height: 10),
                   const Text(
                     '¡ALARMA!',
@@ -103,7 +87,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD2E3FC), // Celeste
+                      color: const Color(0xFFD2E3FC),
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(color: Colors.black, width: 2),
                     ),
@@ -126,6 +110,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
                       Text(
                         nombre.toUpperCase(),
                         style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
                       if (dosis.isNotEmpty)
@@ -161,38 +146,43 @@ class _AlarmScreenState extends State<AlarmScreen> {
                 ),
               ),
 
-              // Botón Verde Inferior
+              // Botón Verde
               SizedBox(
                 width: double.infinity,
-                height: 65,
+                height: 80,
                 child: ElevatedButton(
-                    onPressed: () async {
-                      final int id = widget.medicamento['id'] ?? 0;
-                      final String llaveUnica = "med_$id";
-
-                      // 1. Lo guardamos en la RAM (rápido)
-                      AlarmViewModel.alarmasSilenciadas.add(llaveUnica);
-
-                      // 👇 2. LA CURA DEL ALZHEIMER: Lo guardamos en el Disco Duro 👇
-                      final prefs = await SharedPreferences.getInstance();
-                      final String fechaHoy = DateFormat('yyyy-MM-dd').format(DateTime.now());
-                      await prefs.setBool("${llaveUnica}_$fechaHoy", true);
-
-                      // 3. Apagamos todo y cerramos
-                      _voiceService.detener();
-                      await NotificationService().apagarAlarmas();
-
-                      if (mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1AA23A),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
+                  onPressed: () {
+                    // 👇 ¡AQUÍ ESTÁ LA SOLUCIÓN! 👇
+                    // Le avisamos INMEDIATAMENTE al radar que ya estamos atendiendo este remedio
+                    // para que no vuelva a disparar el sonido en el próximo ciclo de fondo.
+                    final int id = widget.medicamento['id'] ?? 0;
+                    final String llaveUnica = "med_$id";
+                    AlarmViewModel.alarmasSilenciadas.add(llaveUnica);
+
+                    setState(() {
+                      _goingToInstructions = true;
+                    });
+
+                    _autoCloseTimer?.cancel();
+
+                    // Saltamos a la fase pacífica de instrucciones
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InstruccionMedicamentoScreen(
+                          medicamento: widget.medicamento,
+                        ),
+                      ),
+                    );
+                  },
                   child: const Text(
-                    'SÍ, YA LO TOMÉ',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    'ATENDER\nRECORDATORIO',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),
               ),

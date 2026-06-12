@@ -31,7 +31,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 📸 BOTÓN DE LA CÁMARA (Ahora guarda directo)
+            // 📸 BOTÓN DE LA CÁMARA
             ListTile(
               leading: const Icon(Icons.camera_alt,
                   color: Color(0xFF000080), size: 32),
@@ -42,7 +42,6 @@ class AddMedicationStep4Screen extends StatelessWidget {
                 final foto = await vm.tomarFoto(ImageSource.camera);
 
                 if (foto != null) {
-                  // 👇 LA SOLUCIÓN: Guardamos directo usando tu variable esCaja
                   if (esCaja) {
                     vm.setFotoCaja(foto);
                   } else {
@@ -162,7 +161,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                       'INSTRUCCIONES',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 24,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -177,18 +176,30 @@ class AddMedicationStep4Screen extends StatelessWidget {
                         border: Border.all(color: Colors.black, width: 4),
                       ),
                       child: TextField(
-                        maxLines: 4,
                         onChanged: vm.setInstrucciones,
-                        style: const TextStyle(fontSize: 20),
-                        decoration: const InputDecoration(
-                          hintText:
-                          'Ej: no masticar la pastilla y tomar\ncon abundante líquido',
+
+                        // 👇 CENTRADO Y MAGIA DINÁMICA 👇
+                        textAlign: TextAlign.center,
+                        minLines: 3,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+
+                        // 👇 COLOR Y BOLD CUANDO EL USUARIO ESCRIBE 👇
+                        style: const TextStyle(
+                          fontSize: 26,
+                          color: Color(0xFF000080),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        // 👇 HINT TRANSPARENTE 👇
+                        decoration: InputDecoration(
+                          hintText: 'Ej: no masticar la pastilla y tomar\ncon abundante líquido',
                           hintStyle: TextStyle(
-                              fontSize: 20,
-                              color: Color(0xFF000080),
-                              fontWeight: FontWeight.bold),
+                            fontSize: 26,
+                            color: const Color(0xFF000080).withValues(alpha: 0.5),
+                            fontWeight: FontWeight.bold,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
                     ),
@@ -200,7 +211,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                       'FOTOS',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 24,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -276,28 +287,28 @@ class AddMedicationStep4Screen extends StatelessWidget {
                             onPressed: vm.guardando
                                 ? null
                                 : () async {
-                                    final exito = await vm.guardar();
-                                    if (exito && context.mounted) {
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => const HomeScreen()),
-                                        (route) => false,
-                                      );
-                                    }
-                                  },
+                              final exito = await vm.guardar();
+                              if (exito && context.mounted) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const HomeScreen()),
+                                      (route) => false,
+                                );
+                              }
+                            },
                             child: vm.guardando
                                 ? const CircularProgressIndicator(
-                                    color: Colors.white)
+                                color: Colors.white)
                                 : const Text(
-                                    'Guardar',
-                                    style: TextStyle(
-                                      fontFamily: 'Roboto',
-                                      fontSize: 32,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              'Guardar',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 32,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),
