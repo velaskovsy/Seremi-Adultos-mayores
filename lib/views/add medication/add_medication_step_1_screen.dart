@@ -72,6 +72,7 @@ class AddMedicationStep1Screen extends StatelessWidget {
                   // Campo nombre
                   InputField(
                     label: 'NOMBRE DEL MEDICAMENTO',
+                    labelFontSize: 28,
                     hint: 'Ej: Paracetamol',
                     onChanged: vm.setNombre,
                     errorText: vm.errorNombre,
@@ -84,6 +85,7 @@ class AddMedicationStep1Screen extends StatelessWidget {
                   // Campo dosis
                   InputField(
                     label: 'DOSIS',
+                    labelFontSize: 28,
                     hint: 'Ej: 100mg o 1 pastilla',
                     onChanged: vm.setDosis,
                     errorText: vm.errorDosis,

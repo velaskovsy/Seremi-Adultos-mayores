@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // 👈 IMPORTANTE: Agregado el import de SVG
 
-class DetalleMedicamentoScreen extends StatelessWidget {
-  final Map<String, dynamic> medicamento;
+class DetalleActividadScreen extends StatelessWidget {
+  final Map<String, dynamic> actividad;
 
-  const DetalleMedicamentoScreen({
+  const DetalleActividadScreen({
     Key? key,
-    required this.medicamento,
+    required this.actividad,
   }) : super(key: key);
 
   static const Color colorPrimario = Color(0xFF000080);
@@ -18,24 +18,16 @@ class DetalleMedicamentoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── DATOS REALES (Los que sí llegan del Home) ──
-    final String nombre = medicamento['nombre'] ?? 'Paracetamol';
-    final String hora = medicamento['hora'] ?? '07:00'; // 👈 AQUÍ AGREGAMOS LA HORA
-    final String dosis = medicamento['dosis'] ?? '1 pastilla';
-
-    // ── DATOS HARDCODEADOS (Modo supervivencia) ──
-    final String frecuencia = 'Cada 8 horas';
-    final String instrucciones = 'No masticar la pastilla y tomar con abundante líquido';
-
-    // Forzamos las fotos vacías para que muestre el ícono de la cámara por ahora
-    final String fotoCaja = '';
-    final String fotoRemedio = '';
+    // ── DATOS REALES ──
+    final String nombre = actividad['nombre'] ?? 'Actividad';
+    final String hora = actividad['hora'] ?? '00:00';
+    final String detalle = actividad['detalle'] ?? '1 vaso';
 
     return Scaffold(
       backgroundColor: colorFondo,
       body: Column(
         children: [
-          // ── HEADER PERSONALIZADO (Estilo Home) ──
+          // ── HEADER PERSONALIZADO ──
           Container(
             width: double.infinity,
             height: 135,
@@ -44,7 +36,6 @@ class DetalleMedicamentoScreen extends StatelessWidget {
               padding: const EdgeInsets.only(top: 40),
               child: Row(
                 children: [
-                  // Botón Volver
                   Padding(
                     padding: const EdgeInsets.only(left: 16),
                     child: GestureDetector(
@@ -56,15 +47,10 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          color: Color(0xFF000080),
-                          size: 28,
-                        ),
+                        child: const Icon(Icons.arrow_back, color: Color(0xFF000080), size: 28),
                       ),
                     ),
                   ),
-                  // Título centrado
                   const Expanded(
                     child: Text(
                       'Detalle del evento',
@@ -77,7 +63,6 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Espaciador invisible
                   const SizedBox(width: 62),
                 ],
               ),
@@ -100,14 +85,16 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                           width: 100,
                           height: 100,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00E600),
+                            color: const Color(0xFFB200FF), // Morado
                             borderRadius: BorderRadius.circular(20),
                           ),
                           padding: const EdgeInsets.all(16),
+                          // 👇 AQUÍ ESTÁ TU SVG 'walking.svg' 👇
                           child: SvgPicture.asset(
-                            'assets/imagenes/iconos/medicines.svg',
+                            'assets/imagenes/iconos/walking.svg',
                             colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                            placeholderBuilder: (context) => const Icon(Icons.medication, color: Colors.white, size: 60),
+                            // Fallback por si no carga el SVG
+                            placeholderBuilder: (context) => const Icon(Icons.directions_walk, color: Colors.white, size: 60),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -123,7 +110,7 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                       ],
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 40),
 
                     // ── SECCIÓN: DETALLES ──
                     const Text(
@@ -143,71 +130,14 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          // 👇 AQUÍ ESTÁ EL TERCER CUADRITO DE LA HORA 👇
                           _buildDetalleFila('Hora del\nrecordatorio', hora),
                           const Divider(color: colorGrisBorde, thickness: 2, height: 0),
-                          _buildDetalleFila('Dosis', dosis),
-                          const Divider(color: colorGrisBorde, thickness: 2, height: 0),
-                          _buildDetalleFila('Frecuencia', frecuencia),
+                          _buildDetalleFila('Cantidad', detalle),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 30),
-
-                    // ── SECCIÓN: INSTRUCCIONES ──
-                    if (instrucciones.isNotEmpty) ...[
-                      const Text(
-                        'INSTRUCCIONES',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.black, width: 3),
-                        ),
-                        child: Text(
-                          instrucciones,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: colorPrimario,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                    ],
-
-                    // ── SECCIÓN: FOTOS ──
-                    const Text(
-                      'FOTOS',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFotoCard('CAJA', fotoCaja),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildFotoCard('REMEDIO', fotoRemedio),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 50),
 
                     // ── BOTONES DE ACCIÓN ──
                     ElevatedButton(
@@ -217,11 +147,11 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 65),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4, // 👈 Sombras listas
+                        elevation: 4,
                       ),
                       child: const Text(
                         'Editar recordatorio',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold), // 👈 Textos en Bold
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -232,11 +162,11 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 65),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4, // 👈 Sombras listas
+                        elevation: 4,
                       ),
                       child: const Text(
                         'Eliminar recordatorio',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold), // 👈 Textos en Bold
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -256,7 +186,6 @@ class DetalleMedicamentoScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // 👈 El Expanded previene que se rompa el diseño con textos largos como "Hora del recordatorio"
           Expanded(
             child: Text(
               etiqueta,
@@ -278,44 +207,6 @@ class DetalleMedicamentoScreen extends StatelessWidget {
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFotoCard(String etiqueta, String rutaFoto) {
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        color: colorGrisFondo,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade500, width: 2),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: rutaFoto.isNotEmpty
-                  ? Text('Cargar imagen: $rutaFoto')
-                  : Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey.shade500),
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.grey.shade500, width: 2)),
-            ),
-            child: Text(
-              etiqueta,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: colorPrimario,
-              ),
             ),
           ),
         ],

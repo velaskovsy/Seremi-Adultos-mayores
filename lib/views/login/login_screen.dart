@@ -4,6 +4,7 @@ import '../../../viewmodels/login_viewmodel.dart';
 import '../../core/widgets/input_field.dart';
 import '../register/register_step1_screen.dart';
 import '../home/home_screen.dart';
+import '../../core/utils/rut_formatter.dart';
 
 class LoginScreen extends StatelessWidget {
   @override
@@ -59,6 +60,7 @@ class LoginScreen extends StatelessWidget {
               onChanged: vm.setRut,         // delega al ViewModel
               verticalPadding: 24,
               hintFontSize: 32,
+              inputFormatters: [RutFormatter()],
             ),
 
             // Esto sirve para dar un espacio vertical entre elementos, si se cambia las cajas de los

@@ -31,15 +31,14 @@ class AddMeasurementStep3Screen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.camera_alt,
-                  color: Color(0xFF000080), size: 32),
-              title: const Text('Tomar foto',
-                  style: TextStyle(fontSize: 20)),
+              leading: const Icon(Icons.camera_alt, color: Color(0xFF000080), size: 32),
+              title: const Text('Tomar foto', style: TextStyle(fontSize: 20)),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(context); // Cierra el menú de abajo
                 final foto = await vm.tomarFoto(ImageSource.camera);
+
                 if (foto != null) {
-                  _confirmarFoto(context, vm, foto);
+                  vm.setFotoInstrumento(foto);
                 }
               },
             ),
@@ -58,66 +57,6 @@ class AddMeasurementStep3Screen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Confirmación de foto tomada con cámara ───────────────
-  void _confirmarFoto(BuildContext context, AddMeasurementViewModel vm,
-      XFile foto) {
-    showDialog(
-      context: context,
-      builder: (_) => Stack(
-        children: [
-          Positioned.fill(
-            child: Image.file(
-              File(foto.path),
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // ✗ Desechar
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close,
-                        color: Colors.white, size: 36),
-                  ),
-                ),
-                const SizedBox(width: 40),
-                // ✓ Guardar
-                GestureDetector(
-                  onTap: () {
-                    vm.setFotoInstrumento(foto);
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check,
-                        color: Colors.white, size: 36),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -194,7 +133,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Roboto',
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
@@ -208,7 +147,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                       'INSTRUCCIONES',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 20,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -223,22 +162,29 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                         border: Border.all(color: Colors.black, width: 2),
                       ),
                       child: TextField(
-                        maxLines: 4,
                         onChanged: vm.setInstrucciones,
+
+                        // 👇 CENTRADO Y MAGIA DINÁMICA 👇
+                        textAlign: TextAlign.center,
+                        minLines: 3,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 26,
                           color: Color(0xFF000080),
                           fontWeight: FontWeight.bold,
                         ),
-                        decoration: const InputDecoration(
+                        // 👇 QUITAMOS EL CONST Y AGREGAMOS TRANSPARENCIA AL HINT 👇
+                        decoration: InputDecoration(
                           hintText: 'Ej: Reposar 5 minutos antes\nde tomar la medición',
                           hintStyle: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF000080),
+                            fontSize: 26,
+                            color: const Color(0xFF000080).withValues(alpha: 0.5),
                             fontWeight: FontWeight.bold,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
                     ),
@@ -247,10 +193,10 @@ class AddMeasurementStep3Screen extends StatelessWidget {
 
                     // ── FOTO ──────────────────────────────────
                     const Text(
-                      'FOTO (Opcional)',
+                      'FOTO',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 20,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -278,7 +224,7 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontFamily: 'Roboto',
-                              fontSize: 16,
+                              fontSize: 24,
                               color: Colors.red,
                               fontWeight: FontWeight.bold,
                             ),
@@ -310,34 +256,34 @@ class AddMeasurementStep3Screen extends StatelessWidget {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15),
                                 side: const BorderSide(
-                                    color: Colors.black, width: 2),
+                                    color: Color(0xFFFF8800), width: 2),
                               ),
                             ),
                             onPressed: vm.guardando
                                 ? null
                                 : () async {
-                                    final exito = await vm.guardar();
-                                    if (exito && context.mounted) {
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => const HomeScreen()),
-                                        (route) => false,
-                                      );
-                                    }
-                                  },
+                              final exito = await vm.guardar();
+                              if (exito && context.mounted) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const HomeScreen()),
+                                      (route) => false,
+                                );
+                              }
+                            },
                             child: vm.guardando
                                 ? const CircularProgressIndicator(
-                                    color: Colors.white)
+                                color: Colors.white)
                                 : const Text(
-                                    'Guardar',
-                                    style: TextStyle(
-                                      fontFamily: 'Roboto',
-                                      fontSize: 32,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              'Guardar',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 32,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),

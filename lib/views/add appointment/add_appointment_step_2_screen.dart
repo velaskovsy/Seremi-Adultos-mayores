@@ -75,7 +75,7 @@ class AddAppointmentStep2Screen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Roboto',
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
@@ -89,7 +89,7 @@ class AddAppointmentStep2Screen extends StatelessWidget {
                       'PROFESIONAL DE SALUD',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 20,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -101,24 +101,32 @@ class AddAppointmentStep2Screen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFE0E0E0),
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.black, width: 2),
+                        border: Border.all(color: Colors.black, width: 4),
                       ),
                       child: TextField(
                         onChanged: vm.setProfesional,
+
+                        // 👇 AQUÍ ESTÁ EL CENTRADO DE TEXTO QUE FALTABA
+                        textAlign: TextAlign.center,
+
+                        minLines: 1,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+
                         style: const TextStyle(
-                          fontSize: 22,
+                          fontSize: 32,
                           color: Color(0xFF000080),
                           fontWeight: FontWeight.bold,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Ej: Doctor Juan García',
                           hintStyle: TextStyle(
-                            fontSize: 20,
-                            color: Color(0xFF000080),
+                            fontSize: 32,
+                            color: const Color(0xFF000080).withValues(alpha: 0.5),
                             fontWeight: FontWeight.bold,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
                     ),
@@ -130,7 +138,7 @@ class AddAppointmentStep2Screen extends StatelessWidget {
                         child: Text(
                           vm.errorProfesional!,
                           style: const TextStyle(
-                              color: Colors.red, fontSize: 16),
+                              color: Colors.red, fontSize: 24),
                         ),
                       ),
 
@@ -141,7 +149,7 @@ class AddAppointmentStep2Screen extends StatelessWidget {
                       'NOTAS',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 20,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -153,25 +161,29 @@ class AddAppointmentStep2Screen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFE0E0E0),
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.black, width: 2),
+                        border: Border.all(color: Colors.black, width: 4),
                       ),
                       child: TextField(
-                        maxLines: 4,
                         onChanged: vm.setNotas,
+                        textAlign: TextAlign.center,
+                        minLines: 3,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 32,
                           color: Color(0xFF000080),
                           fontWeight: FontWeight.bold,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Ej: Ir en ayuna',
                           hintStyle: TextStyle(
-                            fontSize: 18,
-                            color: Color(0xFF000080),
+                            fontSize: 32,
+                            color: const Color(0xFF000080).withValues(alpha: 0.5),
                             fontWeight: FontWeight.bold,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
                     ),
@@ -188,7 +200,7 @@ class AddAppointmentStep2Screen extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.red,
-                              fontSize: 16,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

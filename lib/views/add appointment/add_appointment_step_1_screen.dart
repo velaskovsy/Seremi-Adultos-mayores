@@ -55,6 +55,8 @@ class AddAppointmentStep1Screen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      // 👇 LA LÍNEA MÁGICA: El teclado pasa por encima, la pantalla NO se encoge
+      resizeToAvoidBottomInset: false,
       body: Column(
         children: [
 
@@ -124,39 +126,45 @@ class AddAppointmentStep1Screen extends StatelessWidget {
 
                   // FECHA
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'FECHA',
-                        style: TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                      const Expanded(
+                        child: Text(
+                          'FECHA',
+                          style: TextStyle(
+                            fontFamily: 'Roboto',
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 10),
                       GestureDetector(
                         onTap: () => _seleccionarFecha(context, vm),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: const Color(0xFF000080),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                vm.fechaTexto,
-                                style: const TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 22,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                              Flexible(
+                                child: Text(
+                                  vm.fechaTexto,
+                                  style: const TextStyle(
+                                    fontFamily: 'Roboto',
+                                    fontSize: 24,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_drop_down,
-                                  color: Colors.white),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_drop_down, color: Colors.white),
                             ],
                           ),
                         ),
@@ -174,7 +182,7 @@ class AddAppointmentStep1Screen extends StatelessWidget {
                         'HORA',
                         style: TextStyle(
                           fontFamily: 'Roboto',
-                          fontSize: 28,
+                          fontSize: 32, // 👈 IGUALAMOS A 32 (antes estaba en 28)
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -213,13 +221,16 @@ class AddAppointmentStep1Screen extends StatelessWidget {
                   // LUGAR
                   InputField(
                     label: 'LUGAR',
-                    hint: 'Ej:',
+                    labelFontSize: 32,
+                    hint: 'Ej: Hospital Clínico',
                     onChanged: vm.setLugar,
                     errorText: vm.errorLugar,
-                    hintFontSize: 24,
-                    verticalPadding: 28,
+                    hintFontSize: 30,
+                    labelLeftPadding: 0,
+                    verticalPadding: 16,
                   ),
 
+                  // 👇 TU SPACER ORIGINAL, NUNCA COLAPSARÁ POR EL RESIZE FALSE
                   const Spacer(),
 
                   // BOTÓN SIGUIENTE

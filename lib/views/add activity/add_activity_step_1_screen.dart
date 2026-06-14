@@ -116,11 +116,11 @@ class _AddActivityStep1ScreenState extends State<AddActivityStep1Screen> {
                       onChanged: (q) => _filtrar(q, vm.tiposActividad),
                       decoration: const InputDecoration(
                         hintText: 'Buscar',
-                        hintStyle: TextStyle(fontSize: 24, color: Colors.black54),
+                        hintStyle: TextStyle(fontSize: 30, color: Colors.black54),
                         prefixIcon: Icon(Icons.search, color: Colors.black54, size: 28),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
+                            horizontal: 16, vertical: 8),
                       ),
                     ),
                   ),
@@ -131,7 +131,7 @@ class _AddActivityStep1ScreenState extends State<AddActivityStep1Screen> {
                     '¿Qué hábito desea agregar?',
                     style: TextStyle(
                       fontFamily: 'Roboto',
-                      fontSize: 22,
+                      fontSize: 26,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
                     ),

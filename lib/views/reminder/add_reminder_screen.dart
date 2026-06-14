@@ -21,10 +21,11 @@ class AddReminderScreen extends StatelessWidget {
             width: double.infinity,
             height: 135,
             color: const Color(0xFF000080),
+            padding: const EdgeInsets.only(top: 50),
             child: Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 16),
+                  padding: const EdgeInsets.only(left: 14),
                   child: GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
@@ -183,15 +184,21 @@ class AddReminderScreen extends StatelessWidget {
             const SizedBox(width: 20),
 
             // Texto
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+            // 👇 1. ENVOLVEMOS EN EXPANDED 👇
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 32, // Mantenemos tu letra grande y accesible
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                maxLines: 2, // 👈 2. Permite que "Cita Médica" salte a la línea de abajo
+                overflow: TextOverflow.ellipsis, // Por si acaso algo es brutalmente largo
               ),
             ),
+            const SizedBox(width: 16), // 👈 3. Un pequeño margen para que el texto no raspe la pared derecha
           ],
         ),
       ),

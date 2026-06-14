@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -31,19 +30,27 @@ class AddMedicationStep4Screen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
+
+            // 📸 BOTÓN DE LA CÁMARA
             ListTile(
               leading: const Icon(Icons.camera_alt,
                   color: Color(0xFF000080), size: 32),
               title: const Text('Tomar foto',
                   style: TextStyle(fontSize: 20)),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(context); // Cierra el menú inferior
                 final foto = await vm.tomarFoto(ImageSource.camera);
+
                 if (foto != null) {
-                  _confirmarFoto(context, vm, foto, esCaja);
+                  if (esCaja) {
+                    vm.setFotoCaja(foto);
+                  } else {
+                    vm.setFotoRemedio(foto);
+                  }
                 }
               },
             ),
+
             ListTile(
               leading: const Icon(Icons.photo_library,
                   color: Color(0xFF000080), size: 32),
@@ -52,6 +59,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
               onTap: () async {
                 Navigator.pop(context);
                 final foto = await vm.tomarFoto(ImageSource.gallery);
+
                 if (foto != null) {
                   if (esCaja) {
                     vm.setFotoCaja(foto);
@@ -63,68 +71,6 @@ class AddMedicationStep4Screen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Confirmación de foto tomada con cámara
-  void _confirmarFoto(BuildContext context, AddMedicationViewModel vm,
-      XFile foto, bool esCaja) {
-    showDialog(
-      context: context,
-      builder: (_) => Stack(
-        children: [
-          Positioned.fill(
-            child: Image.file(
-              File(foto.path),
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close,
-                        color: Colors.white, size: 36),
-                  ),
-                ),
-                const SizedBox(width: 40),
-                GestureDetector(
-                  onTap: () {
-                    if (esCaja) {
-                      vm.setFotoCaja(foto);
-                    } else {
-                      vm.setFotoRemedio(foto);
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check,
-                        color: Colors.white, size: 36),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -215,7 +161,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                       'INSTRUCCIONES',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 24,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -230,18 +176,30 @@ class AddMedicationStep4Screen extends StatelessWidget {
                         border: Border.all(color: Colors.black, width: 4),
                       ),
                       child: TextField(
-                        maxLines: 4,
                         onChanged: vm.setInstrucciones,
-                        style: const TextStyle(fontSize: 20),
-                        decoration: const InputDecoration(
-                          hintText:
-                          'Ej: no masticar la pastilla y tomar\ncon abundante líquido',
+
+                        // 👇 CENTRADO Y MAGIA DINÁMICA 👇
+                        textAlign: TextAlign.center,
+                        minLines: 3,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+
+                        // 👇 COLOR Y BOLD CUANDO EL USUARIO ESCRIBE 👇
+                        style: const TextStyle(
+                          fontSize: 26,
+                          color: Color(0xFF000080),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        // 👇 HINT TRANSPARENTE 👇
+                        decoration: InputDecoration(
+                          hintText: 'Ej: no masticar la pastilla y tomar\ncon abundante líquido',
                           hintStyle: TextStyle(
-                              fontSize: 20,
-                              color: Color(0xFF000080),
-                              fontWeight: FontWeight.bold),
+                            fontSize: 26,
+                            color: const Color(0xFF000080).withValues(alpha: 0.5),
+                            fontWeight: FontWeight.bold,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
                     ),
@@ -253,7 +211,7 @@ class AddMedicationStep4Screen extends StatelessWidget {
                       'FOTOS',
                       style: TextStyle(
                         fontFamily: 'Roboto',
-                        fontSize: 24,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -329,28 +287,28 @@ class AddMedicationStep4Screen extends StatelessWidget {
                             onPressed: vm.guardando
                                 ? null
                                 : () async {
-                                    final exito = await vm.guardar();
-                                    if (exito && context.mounted) {
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => const HomeScreen()),
-                                        (route) => false,
-                                      );
-                                    }
-                                  },
+                              final exito = await vm.guardar();
+                              if (exito && context.mounted) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const HomeScreen()),
+                                      (route) => false,
+                                );
+                              }
+                            },
                             child: vm.guardando
                                 ? const CircularProgressIndicator(
-                                    color: Colors.white)
+                                color: Colors.white)
                                 : const Text(
-                                    'Guardar',
-                                    style: TextStyle(
-                                      fontFamily: 'Roboto',
-                                      fontSize: 32,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              'Guardar',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 32,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),

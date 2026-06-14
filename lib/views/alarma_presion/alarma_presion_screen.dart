@@ -1,9 +1,12 @@
+// lib/views/alarma_presion/alarma_medicion_screen.dart (o la ruta donde lo tengas)
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../services/voice_service.dart'; // Importa tu servicio de voz
 
-// ⚠️ IMPORTACIÓN DE TU PANTALLA DE REGISTRO DE PRESIÓN POST-ALARMA
-// Ajusta la ruta exacta según dónde tengas guardado este archivo
-import '../add measurement/add_measurement_presion_after_alarm.dart';
+import '../../services/notificacion_service.dart';
+import '../../viewmodels/alarma_medicacion_viewmodel.dart'; // IMPORTAMOS EL VIEWMODEL PARA EL CANDADO
+
+// 👇 IMPORTAMOS LA NUEVA PANTALLA PACÍFICA DE INSTRUCCIONES 👇
+import '../Instrucciones/instrucciones_medicion_screen.dart';
 
 class AlarmaMedicionScreen extends StatefulWidget {
   final Map<String, dynamic> medicion;
@@ -15,65 +18,79 @@ class AlarmaMedicionScreen extends StatefulWidget {
 }
 
 class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
-  final VoiceService _voiceService = VoiceService(); // Integración de voz
+  // VARIABLE DEL RELOJ DE ARENA
+  Timer? _autoCloseTimer;
+
+  // 👇 BANDERA PARA PROTEGER EL CANDADO AL CAMBIAR DE PANTALLA 👇
+  bool _goingToInstructions = false;
 
   @override
   void initState() {
     super.initState();
-    _dispararVozGuia();
-  }
 
-  /// Activa la guía por voz para el adulto mayor al abrir la pantalla
-  void _dispararVozGuia() async {
-    final String nombre = widget.medicion['nombre'] ?? 'Mídase la presión';
-    final String detalle = widget.medicion['detalle'] ?? 'Instrumento';
+    // CERRAMOS EL CANDADO
+    AlarmViewModel.pantallaAlarmaAbierta = true;
 
-    // Asegura la inicialización del motor TTS antes de hablar
-    await _voiceService.init();
-    // Frase personalizada y pausada ideal para accesibilidad
-    await _voiceService.hablar("Atención. ¡Hora de tu alarma! Es momento de: $nombre. Instrucciones $detalle.");
+    // INICIAMOS LA CUENTA REGRESIVA DE 59 SEGUNDOS
+    _autoCloseTimer = Timer(const Duration(seconds: 59), () {
+      if (mounted) {
+        print("⏳ El usuario no contestó la presión en 59 segundos. Cerrando...");
+        Navigator.of(context).pop();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _voiceService.detener(); // Detiene el audio inmediatamente si el usuario cierra antes de que termine
+    // MATAMOS EL RELOJ
+    _autoCloseTimer?.cancel();
+
+    // 👇 PROTEGEMOS EL CANDADO SI VAMOS A LAS INSTRUCCIONES 👇
+    if (!_goingToInstructions) {
+      AlarmViewModel.pantallaAlarmaAbierta = false;
+      print("🔒 Candado abierto porque la alarma expiró o se cerró sin atender.");
+    } else {
+      print("🛡️ Candado protegido. El control de la presión pasa a la pantalla de instrucciones.");
+    }
+
+    // SOLUCIÓN AL AUDIO FANTASMA
+    NotificationService().apagarAlarmas();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Extracción segura de datos con respaldos por defecto
     final String hora = widget.medicion['hora'] ?? '--:--';
     final String nombre = widget.medicion['nombre'] ?? 'MÍDASE LA PRESIÓN';
     final String detalle = widget.medicion['detalle'] ?? 'Instrumento';
-    final String? urlFoto = widget.medicion['url_foto_remedio'];
+    final String? urlFoto = widget.medicion['url_foto_remedio']; // Ojo si tu variable se llama distinto para presión
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFC5C5), // Fondo rosado exacto de la imagen de alarma
+      backgroundColor: const Color(0xFFFFC5C5),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Sección Superior (Icono + ¡ALARMA! + Hora celeste)
+              // Sección Superior
               Column(
                 children: [
                   const SizedBox(height: 20),
-                  const Icon(Icons.error_outline, color: Colors.red, size: 80),
+                  const Icon(Icons.notifications_active, color: Colors.red, size: 80),
                   const SizedBox(height: 10),
                   const Text(
                     '¡ALARMA!',
                     style: TextStyle(color: Colors.red, fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 15),
-                  // Óvalo celeste del mockup para destacar el horario
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD2E3FC), // Celeste pastel exacto
+                      color: const Color(0xFFD2E3FC),
                       borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.black, width: 2), // Borde definido como en la imagen
+                      border: Border.all(color: Colors.black, width: 2),
                     ),
                     child: Text(
                       hora,
@@ -83,15 +100,15 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                 ],
               ),
 
-              // Tarjeta Blanca Central del Mockup
+              // Tarjeta Blanca Central
               Card(
                 color: Colors.white,
-                elevation: 2, // Leve sombra para resaltar del fondo rosado
+                elevation: 2,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min, // La tarjeta se ajusta a su contenido
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         nombre.toUpperCase(),
@@ -99,18 +116,16 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                         style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black),
                       ),
                       const SizedBox(height: 12),
-                      // Subtítulo del dispositivo (Ej: Instrumento / Tensiómetro)
                       Text(
                         detalle,
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Color(0xFF0D1B3E)),
                       ),
                       const SizedBox(height: 15),
-                      // Imagen grande central de la medición (tensiómetro)
                       Container(
                         height: 180,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.grey[100], // Fondo de carga neutro
+                          color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: ClipRRect(
@@ -132,37 +147,31 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
               ),
 
               // =========================================================
-              // BOTÓN VERDE CON ESCÁNER Y DETECCIÓN INTELIGENTE
+              // BOTÓN VERDE "ATENDER RECORDATORIO"
               // =========================================================
               SizedBox(
                 width: double.infinity,
-                height: 65,
+                height: 80, // Lo hice un poco más alto para accesibilidad
                 child: ElevatedButton(
                   onPressed: () {
-                    // 1. ESCÁNER: Imprimimos en consola qué trae exactamente la notificación
-                    print('=====================================');
-                    print('🕵️‍♂️ DATOS DE LA NOTIFICACIÓN QUE TOCASTE:');
-                    print(widget.medicion);
-                    print('=====================================');
+                    // 👇 1. AGREGAMOS LA PRESIÓN A LA LISTA NEGRA DEL RADAR INMEDIATAMENTE 👇
+                    final int id = widget.medicion['id'] ?? 0;
+                    AlarmViewModel.alarmasSilenciadas.add("presion_$id");
 
-                    // 2. DETECCIÓN INTELIGENTE: En vez de exigir texto exacto, buscamos la palabra "repeticion"
-                    String tipoRecibido = widget.medicion['tipo']?.toString().toLowerCase() ?? '';
-                    String detalleRecibido = widget.medicion['detalle']?.toString().toLowerCase() ?? '';
-                    String nombreRecibido = widget.medicion['nombre']?.toString().toLowerCase() ?? '';
+                    // 2. ACTIVAMOS LA BANDERA PARA NO ABRIR EL CANDADO AL MORIR
+                    setState(() {
+                      _goingToInstructions = true;
+                    });
 
-                    // 👇 AQUÍ SE PEGABA ESE CÓDIGO 👇
-                    bool esRep = tipoRecibido.contains('repetic') ||
-                        detalleRecibido.contains('repetic') ||
-                        nombreRecibido.contains('repetic');
+                    // 3. MATAMOS EL TEMPORIZADOR DE ESTA PANTALLA
+                    _autoCloseTimer?.cancel();
 
-                    _voiceService.detener();
-
+                    // 👇 4. VIAJAMOS A LA PANTALLA PACÍFICA DE INSTRUCCIONES 👇
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => AddMeasurementPresionAfterAlarm(
-                          // 👇 Usamos nuestra nueva variable inteligente 👇
-                          esRepeticion: esRep,
+                        builder: (_) => InstruccionPresionScreen(
+                          medicion: widget.medicion,
                         ),
                       ),
                     );
@@ -173,12 +182,12 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
                     elevation: 3,
                   ),
                   child: const Text(
-                    'YA LA MEDÍ',
+                    'ATENDER\nRECORDATORIO',
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),
               ),
-
             ],
           ),
         ),

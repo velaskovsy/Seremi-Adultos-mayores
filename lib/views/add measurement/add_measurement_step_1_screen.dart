@@ -124,7 +124,7 @@ class _AddMeasurementStep1ScreenState
                       decoration: const InputDecoration(
                         hintText: 'Buscar',
                         hintStyle: TextStyle(
-                          fontSize: 24,
+                          fontSize: 30,
                           color: Colors.black54,
                         ),
                         prefixIcon: Icon(
@@ -134,7 +134,7 @@ class _AddMeasurementStep1ScreenState
                         ),
                         border: InputBorder.none,
                         contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
                     ),
                   ),
@@ -145,7 +145,7 @@ class _AddMeasurementStep1ScreenState
                     '¿Qué medición desea agregar?',
                     style: TextStyle(
                       fontFamily: 'Roboto',
-                      fontSize: 22,
+                      fontSize: 26,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
                     ),
