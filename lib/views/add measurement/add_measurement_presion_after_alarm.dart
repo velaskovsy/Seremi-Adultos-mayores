@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Necesario para los formatters
+import 'package:flutter/services.dart';
 import '../semaforizacion/resultado_semaforizacion_screen.dart';
 import '../alarma_presion/alerta_critica_presion_alta.dart';
 import '../../core/utils/presion_formatter.dart';
+import '../../services/notificacion_cuidador_service.dart'; // ✅ NUEVO
 
 class AddMeasurementPresionAfterAlarm extends StatefulWidget {
   final bool esRepeticion;
@@ -11,20 +12,21 @@ class AddMeasurementPresionAfterAlarm extends StatefulWidget {
   const AddMeasurementPresionAfterAlarm({
     Key? key,
     this.esRepeticion = false,
-    // Texto por defecto por si entra normal
     this.instruccionesOriginales = 'Use su tensiómetro habitual para medir la presión.',
   }) : super(key: key);
 
   @override
-  _AddMeasurementPresionAfterAlarmState createState() => _AddMeasurementPresionAfterAlarmState();
+  _AddMeasurementPresionAfterAlarmState createState() =>
+      _AddMeasurementPresionAfterAlarmState();
 }
 
-class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionAfterAlarm> {
+class _AddMeasurementPresionAfterAlarmState
+    extends State<AddMeasurementPresionAfterAlarm> {
   final TextEditingController _valueController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  static const Color appNavBarColor = Color(0xFF000080);
-  static const Color inputTextColor = Color(0xFF000080);
+  static const Color appNavBarColor    = Color(0xFF000080);
+  static const Color inputTextColor    = Color(0xFF000080);
   static const Color primaryButtonColor = Color(0xFFFF8800);
 
   @override
@@ -33,24 +35,23 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
     super.dispose();
   }
 
-  /// Procesa el guardado y evalúa si saltar directo a emergencias
   void _guardarMedicion() {
     if (_formKey.currentState!.validate()) {
-      print('Medición guardada: ${_valueController.text}');
-
       String valorPresion = _valueController.text.trim();
 
-      // 2. EVALUACIÓN Y ATAJO A EMERGENCIAS
-      List<String> partes = valorPresion.split('/');
-      int sistolica = int.tryParse(partes[0].trim()) ?? 0;
-      int diastolica = (partes.length > 1) ? (int.tryParse(partes[1].trim()) ?? 0) : 0;
-
-      // Determinamos si los números son de nivel Elevado o Crítico
-      bool esAlta = (sistolica >= 140 || diastolica >= 90);
+      List<String> partes    = valorPresion.split('/');
+      int sistolica          = int.tryParse(partes[0].trim()) ?? 0;
+      int diastolica         = (partes.length > 1) ? (int.tryParse(partes[1].trim()) ?? 0) : 0;
+      bool esAlta            = (sistolica >= 140 || diastolica >= 90);
 
       if (widget.esRepeticion && esAlta) {
-        // ATAJO DIRECTO: Es la repetición y la presión sigue alta.
-        // ¡Saltamos el Semáforo rojo y vamos directo a la emergencia!
+        // ✅ NUEVO — Trigger 3 (atajo directo): segunda medición sigue alta
+        final String nivel = (sistolica >= 200 || diastolica >= 150) ? 'critico' : 'elevado';
+        NotificacionCuidadorService().presionCritica(
+          valorPresion: valorPresion,
+          nivel:        nivel,
+        );
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -60,15 +61,13 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
           ),
         );
       } else {
-        // FLUJO NORMAL: Es la primera vez, o es la repetición pero ya le salió Normal (verde)
-        // Lo enviamos a la pantalla de Semaforización.
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => ResultadoMedicionScreen(
-              presionString: valorPresion,
-              esRepeticion: widget.esRepeticion,
-              instruccionesOriginales: widget.instruccionesOriginales, // Pasamos el bastón
+              presionString:         valorPresion,
+              esRepeticion:          widget.esRepeticion,
+              instruccionesOriginales: widget.instruccionesOriginales,
             ),
           ),
         );
@@ -82,7 +81,6 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ── HEADER PERSONALIZADO (Sin flecha) ──
           Container(
             width: double.infinity,
             height: 135,
@@ -100,8 +98,6 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
               ),
             ),
           ),
-
-          // ── CONTENIDO PRINCIPAL ──
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -112,8 +108,8 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 30),
-                      Center(
-                        child: const Text(
+                      const Center(
+                        child: Text(
                           '¿Qué valor le dió el instrumento?',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -137,11 +133,8 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                       const SizedBox(height: 10),
                       TextFormField(
                         controller: _valueController,
-
                         keyboardType: TextInputType.number,
-
                         inputFormatters: [PresionFormatter()],
-
                         style: const TextStyle(
                           fontSize: 32,
                           color: inputTextColor,
@@ -150,17 +143,12 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                         decoration: InputDecoration(
                           errorMaxLines: 3,
                           errorStyle: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
-                          ),
+                              fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red),
                           hintText: 'Ej: 120 / 80',
                           hintStyle: TextStyle(
-                            color: inputTextColor.withOpacity(0.6),
-                            fontSize: 32,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-
+                              color: inputTextColor.withOpacity(0.6), fontSize: 32),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 18),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.0),
                             borderSide: const BorderSide(color: Colors.black, width: 4.0),
@@ -181,13 +169,9 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                             borderRadius: BorderRadius.circular(12.0),
                             borderSide: const BorderSide(color: Colors.red, width: 4.0),
                           ),
-
                           suffixText: 'mmHg',
                           suffixStyle: const TextStyle(
-                            color: inputTextColor,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              color: inputTextColor, fontSize: 32, fontWeight: FontWeight.bold),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -197,7 +181,6 @@ class _AddMeasurementPresionAfterAlarmState extends State<AddMeasurementPresionA
                         },
                       ),
                       const SizedBox(height: 20),
-
                       const Text(
                         'Escriba el valor tal como aparece en su tensiómetro\n\nEscriba los números seguidos, la barra "/" se pondrá de forma automática.',
                         style: TextStyle(
