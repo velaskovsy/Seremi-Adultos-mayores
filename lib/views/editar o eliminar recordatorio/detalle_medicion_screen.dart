@@ -18,16 +18,12 @@ class DetalleMedicionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── DATOS REALES (Los que sí llegan del Home) ──
-    final String nombre = medicion['nombre'] ?? 'Medir presión';
-    final String hora = medicion['hora'] ?? '07:00';
-
-    // ── DATOS HARDCODEADOS (Modo supervivencia) ──
-    final String frecuencia = 'Cada 24 horas';
-    final String instrucciones = 'Descansar 5 minutos antes de la medición';
-
-    // Forzamos la foto vacía para que muestre el ícono de la cámara por ahora
-    final String fotoInstrumento = '';
+    // ── DATOS REALES (vienen todos desde el endpoint /hoy) ──
+    final String nombre          = medicion['nombre']        ?? '';
+    final String hora            = medicion['hora']          ?? '00:00';
+    final String frecuencia      = medicion['frecuencia']    ?? '';
+    final String instrucciones   = medicion['detalle']       ?? medicion['instrucciones'] ?? '';
+    final String fotoInstrumento = medicion['url_foto']      ?? '';
 
     return Scaffold(
       backgroundColor: colorFondo,
@@ -287,7 +283,22 @@ class DetalleMedicionScreen extends StatelessWidget {
           Expanded(
             child: Center(
               child: rutaFoto.isNotEmpty
-                  ? Text('Cargar imagen: $rutaFoto')
+                  ? ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      child: Image.network(
+                        rutaFoto,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null ? child : const CircularProgressIndicator(),
+                        errorBuilder: (context, error, stack) =>
+                            Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey.shade500),
+                      ),
+                    )
                   : Icon(Icons.camera_alt_outlined, size: 70, color: Colors.grey.shade500),
             ),
           ),

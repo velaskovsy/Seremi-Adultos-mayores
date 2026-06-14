@@ -18,18 +18,14 @@ class DetalleMedicamentoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── DATOS REALES (Los que sí llegan del Home) ──
-    final String nombre = medicamento['nombre'] ?? 'Paracetamol';
-    final String hora = medicamento['hora'] ?? '07:00'; // 👈 AQUÍ AGREGAMOS LA HORA
-    final String dosis = medicamento['dosis'] ?? '1 pastilla';
-
-    // ── DATOS HARDCODEADOS (Modo supervivencia) ──
-    final String frecuencia = 'Cada 8 horas';
-    final String instrucciones = 'No masticar la pastilla y tomar con abundante líquido';
-
-    // Forzamos las fotos vacías para que muestre el ícono de la cámara por ahora
-    final String fotoCaja = '';
-    final String fotoRemedio = '';
+    // ── DATOS REALES (vienen todos desde el endpoint /hoy) ──
+    final String nombre        = medicamento['nombre']           ?? '';
+    final String hora          = medicamento['hora']             ?? '00:00';
+    final String dosis         = medicamento['dosis']            ?? '';
+    final String frecuencia    = medicamento['frecuencia']       ?? '';
+    final String instrucciones = medicamento['instrucciones']    ?? '';
+    final String fotoCaja      = medicamento['url_foto_caja']    ?? '';
+    final String fotoRemedio   = medicamento['url_foto_remedio'] ?? '';
 
     return Scaffold(
       backgroundColor: colorFondo,
@@ -298,7 +294,22 @@ class DetalleMedicamentoScreen extends StatelessWidget {
           Expanded(
             child: Center(
               child: rutaFoto.isNotEmpty
-                  ? Text('Cargar imagen: $rutaFoto')
+                  ? ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      child: Image.network(
+                        rutaFoto,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null ? child : const CircularProgressIndicator(),
+                        errorBuilder: (context, error, stack) =>
+                            Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey.shade500),
+                      ),
+                    )
                   : Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey.shade500),
             ),
           ),

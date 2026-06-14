@@ -152,9 +152,12 @@ class RecordatorioService {
         return {
           'proxima_tarea': data['proxima_tarea'],
           'franjas': {
-            'manana': List<Map<String, dynamic>>.from(data['franjas']['manana'] ?? []),
-            'tarde':  List<Map<String, dynamic>>.from(data['franjas']['tarde']  ?? []),
-            'noche':  List<Map<String, dynamic>>.from(data['franjas']['noche']  ?? []),
+            'manana': List<Map<String, dynamic>>.from(
+                (data['franjas']['manana'] ?? []).map((e) => Map<String, dynamic>.from(e))),
+            'tarde': List<Map<String, dynamic>>.from(
+                (data['franjas']['tarde'] ?? []).map((e) => Map<String, dynamic>.from(e))),
+            'noche': List<Map<String, dynamic>>.from(
+                (data['franjas']['noche'] ?? []).map((e) => Map<String, dynamic>.from(e))),
           },
         };
       }
@@ -220,9 +223,12 @@ class RecordatorioService {
         return {
           'proxima_tarea': data['proxima_tarea'],
           'franjas': {
-            'manana': List<Map<String, dynamic>>.from(data['franjas']['manana'] ?? []),
-            'tarde': List<Map<String, dynamic>>.from(data['franjas']['tarde'] ?? []),
-            'noche': List<Map<String, dynamic>>.from(data['franjas']['noche'] ?? []),
+            'manana': List<Map<String, dynamic>>.from(
+                (data['franjas']['manana'] ?? []).map((e) => Map<String, dynamic>.from(e))),
+            'tarde': List<Map<String, dynamic>>.from(
+                (data['franjas']['tarde'] ?? []).map((e) => Map<String, dynamic>.from(e))),
+            'noche': List<Map<String, dynamic>>.from(
+                (data['franjas']['noche'] ?? []).map((e) => Map<String, dynamic>.from(e))),
           }
         };
       }
