@@ -5,7 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:seremi_adultos_mayores/main.dart';
 import '../services/recordatorio_service.dart';
 import '../services/notificacion_service.dart';
-import '../services/notificacion_cuidador_service.dart'; // ✅ NUEVO
+import '../services/notificacion_cuidador_service.dart';
+import '../services/historial_service.dart'; // ✅ NUEVO
 import '../views/alarma_medicacion/alarma_medicacion_screen.dart';
 import '../views/alarma_presion/alarma_presion_screen.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +14,8 @@ import 'package:flutter/services.dart';
 class AlarmViewModel extends ChangeNotifier {
   final RecordatorioService _recordatorioService = RecordatorioService();
   final NotificationService _notificationService = NotificationService();
-  final NotificacionCuidadorService _cuidadorService = NotificacionCuidadorService(); // ✅ NUEVO
+  final NotificacionCuidadorService _cuidadorService = NotificacionCuidadorService();
+  final HistorialService _historialService = HistorialService(); // ✅ NUEVO
 
   static List<String> alarmasSilenciadas = [];
   static bool pantallaAlarmaAbierta = false;
@@ -29,8 +31,11 @@ class AlarmViewModel extends ChangeNotifier {
 
   final Map<String, String> _alarmasDisparadas = {};
 
-  // ✅ NUEVO: registro de qué alarmas ya notificaron al cuidador (para no repetir)
+  // Registro de qué alarmas ya notificaron al cuidador (para no repetir)
   final Set<String> _cuidadoresNotificados = {};
+
+  // ✅ NUEVO: registro de qué alarmas ya fueron marcadas como no_atendido (para no repetir)
+  final Set<String> _noAtendidosRegistrados = {};
 
   void iniciarMonitoreoDeAlarmas() {
     _alarmTimer?.cancel();
@@ -44,7 +49,8 @@ class AlarmViewModel extends ChangeNotifier {
   void detenerMonitoreo() {
     _alarmTimer?.cancel();
     _alarmasDisparadas.clear();
-    _cuidadoresNotificados.clear(); // ✅ NUEVO
+    _cuidadoresNotificados.clear();
+    _noAtendidosRegistrados.clear(); // ✅ NUEVO
   }
 
   Future<void> sincronizarYVerificarTodo() async {
@@ -91,7 +97,7 @@ class AlarmViewModel extends ChangeNotifier {
               if (_alarmasDisparadas[llaveDisparo] == horaActualStr) break;
               _alarmasDisparadas[llaveDisparo] = horaActualStr;
 
-              // ✅ NUEVO: Trigger 1 — al minuto 30 sin respuesta, avisar al cuidador
+              // Al minuto 30 sin respuesta: notificar al cuidador Y registrar no_atendido
               if (difMinutos == 30) {
                 final String llaveCuidador = "${llaveUnica}_cuidador_notificado_$fechaHoy";
                 if (!_cuidadoresNotificados.contains(llaveCuidador)) {
@@ -99,6 +105,19 @@ class AlarmViewModel extends ChangeNotifier {
                   print('📲 Notificando al cuidador por medicamento no tomado: ${medicamento['nombre']}');
                   _cuidadorService.alertaMedicamento(
                     nombreMedicamento: medicamento['nombre'] ?? 'Medicamento',
+                    horaProgramada: hora,
+                  );
+                }
+
+                // ✅ NUEVO: registrar "no_atendido" en el historial
+                final String llaveNoAtendido = "${llaveUnica}_no_atendido_$fechaHoy";
+                if (!_noAtendidosRegistrados.contains(llaveNoAtendido)) {
+                  _noAtendidosRegistrados.add(llaveNoAtendido);
+                  print('📋 Registrando medicamento como no_atendido: ${medicamento['nombre']}');
+                  _historialService.registrarNoAtendido(
+                    idRecordatorio: id,
+                    tipo: 'medicamento',
+                    nombre: medicamento['nombre'] ?? 'Medicamento',
                     horaProgramada: hora,
                   );
                 }
@@ -166,13 +185,26 @@ class AlarmViewModel extends ChangeNotifier {
               if (_alarmasDisparadas[llaveDisparo] == horaActualStr) break;
               _alarmasDisparadas[llaveDisparo] = horaActualStr;
 
-              // ✅ NUEVO: Trigger 2 — al minuto 30 sin respuesta, avisar al cuidador
+              // Al minuto 30 sin respuesta: notificar al cuidador Y registrar no_atendido
               if (difMinutos == 30) {
                 final String llaveCuidador = "${llaveUnica}_cuidador_notificado_$fechaHoy";
                 if (!_cuidadoresNotificados.contains(llaveCuidador)) {
                   _cuidadoresNotificados.add(llaveCuidador);
                   print('📲 Notificando al cuidador por presión no medida');
                   _cuidadorService.alertaPresion(horaProgramada: hora);
+                }
+
+                // ✅ NUEVO: registrar "no_atendido" en el historial
+                final String llaveNoAtendido = "${llaveUnica}_no_atendido_$fechaHoy";
+                if (!_noAtendidosRegistrados.contains(llaveNoAtendido)) {
+                  _noAtendidosRegistrados.add(llaveNoAtendido);
+                  print('📋 Registrando medición como no_atendida: ${medicion['nombre']}');
+                  _historialService.registrarNoAtendido(
+                    idRecordatorio: id,
+                    tipo: 'medicion',
+                    nombre: medicion['nombre'] ?? 'Control de Presión',
+                    horaProgramada: hora,
+                  );
                 }
               }
 

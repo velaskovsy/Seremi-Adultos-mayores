@@ -259,34 +259,57 @@ class _HistorialScreenState extends State<HistorialScreen> {
 
   Widget _buildTarjetaHistorial(HistorialItem item) {
     final esMedicamento = item.tipo == 'medicamento';
+    // ✅ NUEVO: detectar si fue no atendido
+    final esNoAtendido = item.estado == 'no_tomado';
 
-    // Colores siguiendo la misma paleta que usa la pantalla "Hoy"
     Color colorBorde;
     Color colorRelleno;
     IconData icono;
+    IconData iconoEstado;
 
-    if (esMedicamento) {
-      colorBorde = const Color(0xFF18A528);
+    if (esNoAtendido) {
+      // ── NO ATENDIDO: siempre rojo con advertencia, sin importar el tipo ──
+      colorBorde   = const Color(0xFFCC0000);
+      colorRelleno = const Color(0xFFFFE5E5);
+      icono        = esMedicamento ? Icons.medication : Icons.monitor_heart;
+      iconoEstado  = Icons.warning_rounded;
+    } else if (esMedicamento) {
+      // ── MEDICAMENTO TOMADO ──
+      colorBorde   = const Color(0xFF18A528);
       colorRelleno = const Color(0xFFDEFFE1);
-      icono = Icons.medication;
+      icono        = Icons.medication;
+      iconoEstado  = Icons.check_circle;
     } else {
+      // ── MEDICIÓN DE PRESIÓN REALIZADA ──
       switch (item.nivelPresion) {
         case 'critico':
-          colorBorde = const Color(0xFFFF0505);
+          colorBorde   = const Color(0xFFFF0505);
           colorRelleno = const Color(0xFFFFDFDF);
           break;
         case 'elevado':
-          colorBorde = const Color(0xFFFFA000);
+          colorBorde   = const Color(0xFFFFA000);
           colorRelleno = const Color(0xFFFFF3CD);
           break;
         default:
-          colorBorde = const Color(0xFF18A528);
+          colorBorde   = const Color(0xFF18A528);
           colorRelleno = const Color(0xFFDEFFE1);
       }
-      icono = Icons.monitor_heart;
+      icono       = Icons.monitor_heart;
+      iconoEstado = _iconoPorNivel(item.nivelPresion);
     }
 
     final horaRegistro = DateFormat('HH:mm').format(item.fechaHora);
+
+    // ── Subtítulo de la tarjeta ──
+    String subtitulo;
+    if (esNoAtendido) {
+      final horaRef = item.horaProgramada ?? horaRegistro;
+      subtitulo = 'No atendido · programado a las $horaRef';
+    } else if (esMedicamento) {
+      subtitulo = 'Confirmado a las $horaRegistro';
+    } else {
+      subtitulo = '${item.valorPresion ?? '--'} mmHg · ${_etiquetaNivel(item.nivelPresion)} · $horaRegistro';
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 6),
@@ -318,19 +341,19 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    esMedicamento
-                        ? 'Confirmado a las $horaRegistro'
-                        : '${item.valorPresion ?? '--'} mmHg · ${_etiquetaNivel(item.nivelPresion)} · $horaRegistro',
-                    style: TextStyle(fontSize: 16, color: Colors.black.withOpacity(0.65), fontWeight: FontWeight.w500),
+                    subtitulo,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: esNoAtendido
+                          ? const Color(0xFFCC0000)
+                          : Colors.black.withOpacity(0.65),
+                      fontWeight: esNoAtendido ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              esMedicamento ? Icons.check_circle : _iconoPorNivel(item.nivelPresion),
-              color: colorBorde,
-              size: 28,
-            ),
+            Icon(iconoEstado, color: colorBorde, size: 28),
           ],
         ),
       ),

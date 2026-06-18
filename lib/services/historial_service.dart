@@ -112,6 +112,64 @@ class HistorialService {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // NUEVO: registrarNoAtendido
+  // Se llama desde AlarmViewModel al minuto 30 sin respuesta,
+  // tanto para medicamentos como para mediciones de presión.
+  // ══════════════════════════════════════════════════════════════════
+
+  /// Registra que el usuario NO atendió la alarma en 30 minutos.
+  /// [tipo] debe ser 'medicamento' o 'medicion'.
+  Future<bool> registrarNoAtendido({
+    int? idRecordatorio,
+    required String tipo,
+    required String nombre,
+    String? horaProgramada,
+  }) async {
+    try {
+      final token = await _authService.getToken();
+      if (token == null) return false;
+
+      // El endpoint de medicamento ya acepta estado='no_tomado'.
+      // Para medicion usamos el mismo endpoint pero sin valor_presion
+      // (el backend acepta omitirlo cuando estado=no_tomado).
+      final String endpoint = tipo == 'medicion'
+          ? '$_baseUrl/api/historial/medicion'
+          : '$_baseUrl/api/historial/medicamento';
+
+      final Map<String, dynamic> body = {
+        'id_recordatorio': idRecordatorio,
+        'nombre':           nombre,
+        'hora_programada':  horaProgramada,
+        'estado':           'no_tomado',
+      };
+
+      // Para medicion necesitamos enviar un valor_presion vacío o nulo;
+      // el backend lo ignora cuando estado=no_tomado.
+      if (tipo == 'medicion') {
+        body['valor_presion'] = null;
+      }
+
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 201) {
+        print('📋 HistorialService: registrado como no_atendido ($tipo: $nombre)');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ HistorialService.registrarNoAtendido excepción: $e');
+      return false;
+    }
+  }
+
   /// Obtiene el historial del usuario autenticado.
   /// [tipo] opcional: 'medicamento' o 'medicion' para filtrar.
   Future<List<HistorialItem>> obtenerHistorial({
