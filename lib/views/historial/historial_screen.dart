@@ -164,7 +164,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 18),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: seleccionado ? const Color(0xFF000080) : const Color(0xFFE8EAF6),
@@ -312,9 +312,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         decoration: BoxDecoration(
           color: colorRelleno,
           borderRadius: BorderRadius.circular(12),
@@ -329,7 +329,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
         ),
         child: Row(
           children: [
-            Icon(icono, color: colorBorde, size: 34),
+            Icon(icono, color: colorBorde, size: 42),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -343,7 +343,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   Text(
                     subtitulo,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 20,
                       color: esNoAtendido
                           ? const Color(0xFFCC0000)
                           : Colors.black.withOpacity(0.65),
@@ -353,7 +353,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 ],
               ),
             ),
-            Icon(iconoEstado, color: colorBorde, size: 28),
+            Icon(iconoEstado, color: colorBorde, size: 36),
           ],
         ),
       ),
