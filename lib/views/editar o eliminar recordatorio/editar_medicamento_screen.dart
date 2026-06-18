@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/widgets/photo_box.dart';
 import '../../viewmodels/add_medication_viewmodel.dart';
+import '../../services/medicamento_service.dart'; // 👈 Importamos el servicio
 import '../home/home_screen.dart';
 
 class EditarMedicamentoScreen extends StatefulWidget {
@@ -33,6 +34,7 @@ class _EditarMedicamentoScreenState extends State<EditarMedicamentoScreen> {
   late final TextEditingController _nombreCtrl;
   late final TextEditingController _dosisCtrl;
   late final TextEditingController _instruccionesCtrl;
+  final MedicamentoService _medicamentoService = MedicamentoService(); // 👈 Instancia del servicio
 
   @override
   void initState() {
@@ -59,6 +61,58 @@ class _EditarMedicamentoScreenState extends State<EditarMedicamentoScreen> {
     _dosisCtrl.dispose();
     _instruccionesCtrl.dispose();
     super.dispose();
+  }
+
+  // 👈 Función para mostrar el diálogo de advertencia y eliminar si se confirma
+  Future<void> _advertirEdicionIntervalo(BuildContext context) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text(
+          'No es posible editar intervalo',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Si desea hacerlo, favor eliminar recordatorio y volver a crear. ¿Desea eliminar recordatorio?',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(fontSize: 18, color: Color(0xFF000080), fontWeight: FontWeight.bold),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(fontSize: 18, color: Color(0xFFD32F2F), fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true && mounted) {
+      // Reutiliza la lógica de eliminación enviando el grupoId actual
+      final exito = await _medicamentoService.eliminarGrupoMedicamento(widget.grupoId);
+      if (!mounted) return;
+
+      if (exito) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo eliminar el recordatorio. Intenta de nuevo.')),
+        );
+      }
+    }
   }
 
   Future<void> _seleccionarFecha(
@@ -179,7 +233,7 @@ class _EditarMedicamentoScreenState extends State<EditarMedicamentoScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ── HEADER (mismo estilo que el resto de la app) ──
+          // ── HEADER ──
           Container(
             width: double.infinity,
             height: 135,
@@ -225,7 +279,7 @@ class _EditarMedicamentoScreenState extends State<EditarMedicamentoScreen> {
             ),
           ),
 
-          // ── CONTENIDO (todos los campos en un solo scroll) ──
+          // ── CONTENIDO ──
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -419,7 +473,7 @@ class _EditarMedicamentoScreenState extends State<EditarMedicamentoScreen> {
 
                     const SizedBox(height: 30),
 
-                    // INTERVALO
+                    // INTERVALO (Bloqueado para edición directa)
                     const Text(
                       'INTERVALO',
                       style: TextStyle(
@@ -429,36 +483,34 @@ class _EditarMedicamentoScreenState extends State<EditarMedicamentoScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE3F2FD),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF000080), width: 3),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: vm.intervalo,
-                          isExpanded: true,
-                          icon: const Icon(Icons.keyboard_arrow_down,
-                              color: Color(0xFF000080), size: 32),
-                          style: const TextStyle(
-                            fontFamily: 'Roboto',
-                            fontSize: 30,
-                            color: Color(0xFF000080),
-                            fontWeight: FontWeight.bold,
-                          ),
-                          dropdownColor: const Color(0xFFE3F2FD),
-                          items: vm.intervalos.map((opcion) {
-                            return DropdownMenuItem<String>(
-                              value: opcion,
-                              child: Text(opcion),
-                            );
-                          }).toList(),
-                          onChanged: (valor) {
-                            if (valor != null) vm.setIntervalo(valor);
-                          },
+                    GestureDetector(
+                      onTap: () => _advertirEdicionIntervalo(context), // 👈 Dispara la alerta
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE3F2FD),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF000080), width: 3),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              vm.intervalo ?? '',
+                              style: const TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 30,
+                                color: Color(0xFF000080),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Icon(
+                              Icons.keyboard_arrow_down,
+                              color: Color(0xFF000080),
+                              size: 32,
+                            ),
+                          ],
                         ),
                       ),
                     ),
