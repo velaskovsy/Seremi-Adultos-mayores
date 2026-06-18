@@ -4,15 +4,22 @@ import '../semaforizacion/resultado_semaforizacion_screen.dart';
 import '../alarma_presion/alerta_critica_presion_alta.dart';
 import '../../core/utils/presion_formatter.dart';
 import '../../services/notificacion_cuidador_service.dart'; // ✅ NUEVO
+import '../../services/historial_service.dart';
 
 class AddMeasurementPresionAfterAlarm extends StatefulWidget {
   final bool esRepeticion;
   final String instruccionesOriginales;
+  final int? idRecordatorio;
+  final String nombreMedicion;
+  final String? horaProgramada;
 
   const AddMeasurementPresionAfterAlarm({
     Key? key,
     this.esRepeticion = false,
     this.instruccionesOriginales = 'Use su tensiómetro habitual para medir la presión.',
+    this.idRecordatorio,
+    this.nombreMedicion = 'Control de Presión',
+    this.horaProgramada,
   }) : super(key: key);
 
   @override
@@ -24,6 +31,7 @@ class _AddMeasurementPresionAfterAlarmState
     extends State<AddMeasurementPresionAfterAlarm> {
   final TextEditingController _valueController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final HistorialService _historialService = HistorialService();
 
   static const Color appNavBarColor    = Color(0xFF000080);
   static const Color inputTextColor    = Color(0xFF000080);
@@ -43,6 +51,15 @@ class _AddMeasurementPresionAfterAlarmState
       int sistolica          = int.tryParse(partes[0].trim()) ?? 0;
       int diastolica         = (partes.length > 1) ? (int.tryParse(partes[1].trim()) ?? 0) : 0;
       bool esAlta            = (sistolica >= 140 || diastolica >= 90);
+
+      // Registramos la medición en el backend para que aparezca en el
+      // Historial. Fire-and-forget: si falla, no bloquea el flujo del paciente.
+      _historialService.registrarMedicion(
+        idRecordatorio: widget.idRecordatorio,
+        nombre: widget.nombreMedicion,
+        horaProgramada: widget.horaProgramada,
+        valorPresion: valorPresion,
+      );
 
       if (widget.esRepeticion && esAlta) {
         // ✅ NUEVO — Trigger 3 (atajo directo): segunda medición sigue alta

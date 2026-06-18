@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../views/calendario/calendario_screen.dart';
 import '../../views/home/home_screen.dart';
+import '../../views/historial/historial_screen.dart';
 
 class AppFooter extends StatelessWidget {
-  final int paginaActual; // 0 = Hoy, 1 = Calendario
+  final int paginaActual; // 0 = Hoy, 1 = Calendario, 2 = Historial
 
   const AppFooter({Key? key, this.paginaActual = 0}) : super(key: key);
 
@@ -45,6 +46,23 @@ class AppFooter extends StatelessWidget {
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => const CalendarioScreen()),
+                      (route) => false,
+                );
+              }
+            },
+          ),
+
+          // ── HISTORIAL ─────────────────────────────────────
+          _buildBoton(
+            context: context,
+            icono: Icons.fact_check,
+            label: 'Historial',
+            activo: paginaActual == 2,
+            onTap: () {
+              if (paginaActual != 2) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HistorialScreen()),
                       (route) => false,
                 );
               }

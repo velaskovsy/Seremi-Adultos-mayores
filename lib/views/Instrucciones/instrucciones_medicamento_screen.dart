@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/notificacion_service.dart';
+import '../../services/historial_service.dart';
 import '../../viewmodels/alarma_medicacion_viewmodel.dart';
 
 class InstruccionMedicamentoScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class InstruccionMedicamentoScreen extends StatefulWidget {
 
 class _InstruccionMedicamentoScreenState extends State<InstruccionMedicamentoScreen> {
   final FlutterTts flutterTts = FlutterTts();
+  final HistorialService _historialService = HistorialService();
 
   @override
   void initState() {
@@ -72,6 +74,15 @@ class _InstruccionMedicamentoScreenState extends State<InstruccionMedicamentoScr
     await prefs.setBool("${llaveUnica}_$fechaHoy", true);
 
     print("✅ Registro guardado con éxito: ${widget.medicamento['nombre']}");
+
+    // Registramos la confirmación en el backend para que aparezca en el
+    // Historial. Fire-and-forget: si falla (sin internet, etc.) no bloquea
+    // al usuario, ya quedó guardado localmente arriba.
+    _historialService.registrarMedicamento(
+      idRecordatorio: id,
+      nombre: widget.medicamento['nombre'] ?? 'Medicamento',
+      horaProgramada: widget.medicamento['hora'],
+    );
 
     if (mounted) {
       Navigator.pop(context);

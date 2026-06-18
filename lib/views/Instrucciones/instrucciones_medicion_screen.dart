@@ -74,6 +74,9 @@ class _InstruccionPresionScreenState extends State<InstruccionPresionScreen> {
       MaterialPageRoute(
         builder: (_) => AddMeasurementPresionAfterAlarm(
           esRepeticion: esRep,
+          idRecordatorio: widget.medicion['id'] as int?,
+          nombreMedicion: widget.medicion['nombre'] ?? 'Control de Presión',
+          horaProgramada: widget.medicion['hora'],
         ),
       ),
     );
