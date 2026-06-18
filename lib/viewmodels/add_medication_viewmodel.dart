@@ -1,6 +1,7 @@
 // lib/viewmodels/add_medication_viewmodel.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 import '../services/medicamento_service.dart';
 import '../services/storage_service.dart';
 
@@ -41,6 +42,9 @@ class AddMedicationViewModel extends ChangeNotifier {
   bool _guardando = false;
   String? _errorGuardar;
 
+  // Edición: si no es null, guardar() actualiza este grupo en vez de crear uno nuevo
+  String? _grupoIdEditando;
+
   // ─── Getters ──────────────────────────────────────────────
 
   String get nombre => _nombre;
@@ -59,6 +63,7 @@ class AddMedicationViewModel extends ChangeNotifier {
 
   bool get guardando => _guardando;
   String? get errorGuardar => _errorGuardar;
+  bool get modoEdicion => _grupoIdEditando != null;
 
   String get fechaTexto {
     if (_fecha == null) return 'Seleccionar';
@@ -145,6 +150,33 @@ class AddMedicationViewModel extends ChangeNotifier {
     }
   }
 
+  // ─── Precarga de datos para editar un grupo existente ─────
+
+  void cargarParaEditar({
+    required String grupoId,
+    required String nombre,
+    required String dosis,
+    required String hora,
+    String? intervalo,
+    String? instrucciones,
+  }) {
+    _grupoIdEditando = grupoId;
+    _nombre = nombre;
+    _dosis = dosis;
+
+    final partes = hora.split(':');
+    _hora = TimeOfDay(
+      hour: int.tryParse(partes[0]) ?? 8,
+      minute: int.tryParse(partes.length > 1 ? partes[1] : '0') ?? 0,
+    );
+
+    if (intervalo != null && intervalos.contains(intervalo)) {
+      _intervalo = intervalo;
+    }
+    _instrucciones = instrucciones ?? '';
+    notifyListeners();
+  }
+
   // ─── Validación paso 1 ────────────────────────────────────
 
   bool validarPaso1() {
@@ -162,6 +194,8 @@ class AddMedicationViewModel extends ChangeNotifier {
   }
 
   // ─── Guardar: sube fotos a Supabase y guarda en Railway ───
+  // Si _grupoIdEditando no es null, reemplaza ese grupo (editar);
+  // si es null, crea un grupo nuevo (alta normal).
 
   Future<bool> guardar() async {
     _guardando = true;
@@ -196,9 +230,14 @@ class AddMedicationViewModel extends ChangeNotifier {
     // 4. Obtener las horas que se deben sumar en cada ciclo
     int horasASumar = _obtenerHorasIntervalo(_intervalo);
 
-    bool todosExitosos = true;
+    // 5. Un solo grupo_id para todas las tomas de este medicamento.
+    //    En edición se reutiliza el mismo grupo; en alta se genera uno nuevo.
+    final String grupoId = _grupoIdEditando ?? const Uuid().v4();
 
-    // 5. Bucle iterativo para generar y guardar los registros
+    bool todosExitosos = true;
+    bool esPrimeraIteracion = true;
+
+    // 6. Bucle iterativo para generar y guardar los registros
     while (fechaRegistroActual.isBefore(fechaLimite)) {
 
       // Formateamos la hora en formato HH:mm para el registro individual actual
@@ -206,17 +245,37 @@ class AddMedicationViewModel extends ChangeNotifier {
       final m = fechaRegistroActual.minute.toString().padLeft(2, '0');
       final String horaFormateada = '$h:$m';
 
-      // Guardamos la toma específica en la base de datos
-      final exitoRegistro = await _medicamentoService.crearMedicamento(
-        nombre: _nombre,
-        dosis: _dosis,
-        hora: horaFormateada,
-        fecha: fechaRegistroActual, // Enviamos el DateTime con el día exacto calculado
-        intervalo: _intervalo,
-        instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
-        urlFotoCaja: urlFotoCaja,
-        urlFotoRemedio: urlFotoRemedio,
-      );
+      bool exitoRegistro;
+
+      if (_grupoIdEditando != null && esPrimeraIteracion) {
+        // La primera toma reemplaza (PUT) todas las tomas futuras del grupo
+        exitoRegistro = await _medicamentoService.editarGrupoMedicamento(
+          grupoId: grupoId,
+          nombre: _nombre,
+          dosis: _dosis,
+          hora: horaFormateada,
+          fecha: fechaRegistroActual,
+          intervalo: _intervalo,
+          instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
+          urlFotoCaja: urlFotoCaja,
+          urlFotoRemedio: urlFotoRemedio,
+        );
+      } else {
+        // El resto de las tomas (o todas, si es alta nueva) se crean normalmente
+        exitoRegistro = await _medicamentoService.crearMedicamento(
+          nombre: _nombre,
+          dosis: _dosis,
+          hora: horaFormateada,
+          grupoId: grupoId,
+          fecha: fechaRegistroActual,
+          intervalo: _intervalo,
+          instrucciones: _instrucciones.trim().isNotEmpty ? _instrucciones : null,
+          urlFotoCaja: urlFotoCaja,
+          urlFotoRemedio: urlFotoRemedio,
+        );
+      }
+
+      esPrimeraIteracion = false;
 
       if (!exitoRegistro) {
         todosExitosos = false;

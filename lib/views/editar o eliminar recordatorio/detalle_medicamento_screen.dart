@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../services/medicamento_service.dart';
+import 'editar_medicamento_screen.dart';
 
-class DetalleMedicamentoScreen extends StatelessWidget {
+class DetalleMedicamentoScreen extends StatefulWidget {
   final Map<String, dynamic> medicamento;
 
   const DetalleMedicamentoScreen({
     Key? key,
     required this.medicamento,
   }) : super(key: key);
+
+  @override
+  State<DetalleMedicamentoScreen> createState() =>
+      _DetalleMedicamentoScreenState();
+}
+
+class _DetalleMedicamentoScreenState extends State<DetalleMedicamentoScreen> {
+  final MedicamentoService _medicamentoService = MedicamentoService();
+  bool _eliminando = false;
 
   static const Color colorPrimario = Color(0xFF000080);
   static const Color colorFondo = Colors.white;
@@ -16,8 +27,51 @@ class DetalleMedicamentoScreen extends StatelessWidget {
   static const Color botonEditar = Color(0xFF2196F3);
   static const Color botonEliminar = Color(0xFFD32F2F);
 
+  Future<void> _confirmarEliminar(BuildContext context, String grupoId) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text(
+          '¿Eliminar recordatorio?',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Se eliminarán todas las tomas pendientes de este medicamento. Esta acción no se puede deshacer.',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar', style: TextStyle(fontSize: 18, color: colorPrimario)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar', style: TextStyle(fontSize: 18, color: botonEliminar, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true) return;
+
+    setState(() => _eliminando = true);
+    final exito = await _medicamentoService.eliminarGrupoMedicamento(grupoId);
+    if (!context.mounted) return;
+    setState(() => _eliminando = false);
+
+    if (exito) {
+      Navigator.pop(context, true); // true = recordatorio eliminado, refrescar lista anterior
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo eliminar el recordatorio. Intenta de nuevo.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final medicamento = widget.medicamento;
     // ── DATOS REALES (vienen todos desde el endpoint /hoy) ──
     final String nombre        = medicamento['nombre']           ?? '';
     final String hora          = medicamento['hora']             ?? '00:00';
@@ -26,6 +80,8 @@ class DetalleMedicamentoScreen extends StatelessWidget {
     final String instrucciones = medicamento['instrucciones']    ?? '';
     final String fotoCaja      = medicamento['url_foto_caja']    ?? '';
     final String fotoRemedio   = medicamento['url_foto_remedio'] ?? '';
+    final String? grupoId      = medicamento['grupo_id'];
+    final String? intervalo    = medicamento['intervalo'];
 
     return Scaffold(
       backgroundColor: colorFondo,
@@ -207,7 +263,23 @@ class DetalleMedicamentoScreen extends StatelessWidget {
 
                     // ── BOTONES DE ACCIÓN ──
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: grupoId == null
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditarMedicamentoScreen(
+                                    grupoId: grupoId,
+                                    nombre: nombre,
+                                    dosis: dosis,
+                                    hora: hora,
+                                    intervalo: intervalo,
+                                    instrucciones: instrucciones.isNotEmpty ? instrucciones : null,
+                                  ),
+                                ),
+                              );
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEditar,
                         foregroundColor: Colors.white,
@@ -222,7 +294,9 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: (grupoId == null || _eliminando)
+                          ? null
+                          : () => _confirmarEliminar(context, grupoId),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEliminar,
                         foregroundColor: Colors.white,
@@ -230,10 +304,16 @@ class DetalleMedicamentoScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 4, // 👈 Sombras listas
                       ),
-                      child: const Text(
-                        'Eliminar recordatorio',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold), // 👈 Textos en Bold
-                      ),
+                      child: _eliminando
+                          ? const SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                            )
+                          : const Text(
+                              'Eliminar recordatorio',
+                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold), // 👈 Textos en Bold
+                            ),
                     ),
                     const SizedBox(height: 20),
                   ],
