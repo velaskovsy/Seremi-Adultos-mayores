@@ -53,8 +53,8 @@ class _AlarmaMedicionScreenState extends State<AlarmaMedicionScreen> {
       print("🛡️ Candado protegido. El control de la presión pasa a la pantalla de instrucciones.");
     }
 
-    // SOLUCIÓN AL AUDIO FANTASMA
-    NotificationService().apagarAlarmas();
+    // SOLUCIÓN AL AUDIO FANTASMA (solo esta alarma puntual)
+    NotificationService().apagarAlarma(widget.medicion['id'] ?? 0);
 
     super.dispose();
   }

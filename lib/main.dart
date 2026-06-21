@@ -15,8 +15,10 @@ import 'viewmodels/add_medication_viewmodel.dart';
 import 'views/login/login_screen.dart';
 import 'package:flutter/services.dart';
 import 'services/notificacion_service.dart';
+import 'services/background_tasks.dart';
 import 'views/alarma_medicacion/alarma_medicacion_screen.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:workmanager/workmanager.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -31,6 +33,18 @@ void main() async {
 
   // Inicializar el canal nativo de notificaciones
   await NotificationService().initNotification();
+
+  // 👇 NUEVO: registrar la tarea de background que reprograma alarmas y
+  // revisa "no atendidos". Workmanager re-agenda esto automáticamente
+  // incluso después de que el teléfono se reinicia.
+  await Workmanager().initialize(callbackDispatcher);
+  await Workmanager().registerPeriodicTask(
+    tareaSincronizacionAlarmas,
+    tareaSincronizacionAlarmas,
+    frequency: const Duration(minutes: 15), // mínimo permitido por Android
+    existingWorkPolicy: ExistingWorkPolicy.keep,
+    constraints: Constraints(networkType: NetworkType.connected),
+  );
 
   // Verificar si el sistema operativo abrió la app por una Alarma Intrusiva
   final notificationDetails = await FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails();

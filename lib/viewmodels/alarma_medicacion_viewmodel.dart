@@ -5,8 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:seremi_adultos_mayores/main.dart';
 import '../services/recordatorio_service.dart';
 import '../services/notificacion_service.dart';
-import '../services/notificacion_cuidador_service.dart';
-import '../services/historial_service.dart'; // ✅ NUEVO
 import '../views/alarma_medicacion/alarma_medicacion_screen.dart';
 import '../views/alarma_presion/alarma_presion_screen.dart';
 import 'package:flutter/services.dart';
@@ -14,8 +12,8 @@ import 'package:flutter/services.dart';
 class AlarmViewModel extends ChangeNotifier {
   final RecordatorioService _recordatorioService = RecordatorioService();
   final NotificationService _notificationService = NotificationService();
-  final NotificacionCuidadorService _cuidadorService = NotificacionCuidadorService();
-  final HistorialService _historialService = HistorialService(); // ✅ NUEVO
+  // Nota: el aviso al cuidador y el registro de "no_atendido" ahora se
+  // revisan en background (ver lib/services/background_tasks.dart), no acá.
 
   static List<String> alarmasSilenciadas = [];
   static bool pantallaAlarmaAbierta = false;
@@ -29,250 +27,63 @@ class AlarmViewModel extends ChangeNotifier {
 
   Timer? _alarmTimer;
 
-  final Map<String, String> _alarmasDisparadas = {};
-
-  // Registro de qué alarmas ya notificaron al cuidador (para no repetir)
-  final Set<String> _cuidadoresNotificados = {};
-
-  // ✅ NUEVO: registro de qué alarmas ya fueron marcadas como no_atendido (para no repetir)
-  final Set<String> _noAtendidosRegistrados = {};
-
   void iniciarMonitoreoDeAlarmas() {
     _alarmTimer?.cancel();
-    sincronizarYVerificarTodo();
+    sincronizarYProgramarAlarmas();
 
-    _alarmTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
-      sincronizarYVerificarTodo();
+    // Re-programa todo cada 5 min, por si cambian datos del server.
+    _alarmTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      sincronizarYProgramarAlarmas();
     });
+  }
+
+  // 👇 Entrega TODAS las alarmas/recordatorios al sistema operativo
+  // (AlarmManager) en vez de vigilarlas en memoria. Así suenan/aparecen
+  // aunque la app esté cerrada o el teléfono se haya reiniciado.
+  Future<void> sincronizarYProgramarAlarmas() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String fechaHoy = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
+      for (var medicamento in listadoMedicamentos) {
+        final int id = medicamento['id'] ?? 0;
+        final bool yaTomadaHoy = prefs.getBool("med_${id}_$fechaHoy") ?? false;
+        if (yaTomadaHoy || AlarmViewModel.alarmasSilenciadas.contains("med_$id")) continue;
+        await _notificationService.programarAlarmaDelDia(medicamento, 'medicamento');
+      }
+
+      final listadoMediciones = await _recordatorioService.obtenerSoloMediciones();
+      for (var medicion in listadoMediciones) {
+        final int id = medicion['id'] ?? 0;
+        final bool yaTomadaHoy = prefs.getBool("presion_${id}_$fechaHoy") ?? false;
+        if (yaTomadaHoy || AlarmViewModel.alarmasSilenciadas.contains("presion_$id")) continue;
+        await _notificationService.programarAlarmaDelDia(medicion, 'presion');
+      }
+
+      final listadoActividades = await _recordatorioService.obtenerSoloActividades();
+      for (var actividad in listadoActividades) {
+        await _notificationService.programarNotificacionSimpleDelDia(actividad, 'actividad');
+      }
+
+      final listadoCitas = await _recordatorioService.obtenerSoloCitas();
+      for (var cita in listadoCitas) {
+        await _notificationService.programarNotificacionSimpleDelDia(cita, 'cita');
+      }
+    } catch (e) {
+      print("Error programando alarmas: $e");
+    }
   }
 
   void detenerMonitoreo() {
     _alarmTimer?.cancel();
-    _alarmasDisparadas.clear();
-    _cuidadoresNotificados.clear();
-    _noAtendidosRegistrados.clear(); // ✅ NUEVO
   }
 
   Future<void> sincronizarYVerificarTodo() async {
-    try {
-      final DateTime ahora = DateTime.now();
-      final String horaActualStr = DateFormat('HH:mm').format(ahora);
-      final String fechaHoy = DateFormat('yyyy-MM-dd').format(ahora);
-
-      final prefs = await SharedPreferences.getInstance();
-
-      // ==========================================
-      // BARRIDO 1: BUSCAR MEDICAMENTOS
-      // ==========================================
-      final listadoMedicamentos = await _recordatorioService.obtenerSoloMedicamentos();
-      for (var medicamento in listadoMedicamentos) {
-        final String hora = medicamento['hora'] ?? '';
-        final int id = medicamento['id'] ?? 0;
-        final String llaveUnica = "med_$id";
-
-        bool yaTomadaHoy = prefs.getBool("${llaveUnica}_$fechaHoy") ?? false;
-        if (yaTomadaHoy || AlarmViewModel.alarmasSilenciadas.contains(llaveUnica)) {
-          continue;
-        }
-
-        if (hora.isNotEmpty) {
-          final partes = hora.split(':');
-          if (partes.length == 2) {
-            DateTime horaProgramada = DateTime(ahora.year, ahora.month, ahora.day,
-                int.parse(partes[0]), int.parse(partes[1]));
-
-            if (horaProgramada.isBefore(AlarmViewModel.tiempoInicioApp)) continue;
-
-            DateTime ahoraLimpio = DateTime(ahora.year, ahora.month, ahora.day,
-                ahora.hour, ahora.minute);
-
-            if (ahoraLimpio.isBefore(horaProgramada)) continue;
-
-            int difMinutos = ahoraLimpio.difference(horaProgramada).inMinutes;
-
-            if (difMinutos >= 0 && difMinutos <= 30 && difMinutos % 1 == 0) {
-
-              String llaveDisparo = "${llaveUnica}_$difMinutos";
-
-              if (_alarmasDisparadas[llaveDisparo] == horaActualStr) break;
-              _alarmasDisparadas[llaveDisparo] = horaActualStr;
-
-              // Al minuto 30 sin respuesta: notificar al cuidador Y registrar no_atendido
-              if (difMinutos == 30) {
-                final String llaveCuidador = "${llaveUnica}_cuidador_notificado_$fechaHoy";
-                if (!_cuidadoresNotificados.contains(llaveCuidador)) {
-                  _cuidadoresNotificados.add(llaveCuidador);
-                  print('📲 Notificando al cuidador por medicamento no tomado: ${medicamento['nombre']}');
-                  _cuidadorService.alertaMedicamento(
-                    nombreMedicamento: medicamento['nombre'] ?? 'Medicamento',
-                    horaProgramada: hora,
-                  );
-                }
-
-                // ✅ NUEVO: registrar "no_atendido" en el historial
-                final String llaveNoAtendido = "${llaveUnica}_no_atendido_$fechaHoy";
-                if (!_noAtendidosRegistrados.contains(llaveNoAtendido)) {
-                  _noAtendidosRegistrados.add(llaveNoAtendido);
-                  print('📋 Registrando medicamento como no_atendido: ${medicamento['nombre']}');
-                  _historialService.registrarNoAtendido(
-                    idRecordatorio: id,
-                    tipo: 'medicamento',
-                    nombre: medicamento['nombre'] ?? 'Medicamento',
-                    horaProgramada: hora,
-                  );
-                }
-              }
-
-              try {
-                await platform.invokeMethod('traerAlFrente');
-              } catch (e) {
-                print("No se pudo maximizar la app: $e");
-              }
-
-              NotificationService.ultimoIdProcesado = id;
-              final int intento = difMinutos == 0 ? 1 : 2;
-              await _notificationService.dispararNotificacionPantallaCompleta(
-                  medicamento, 'medicamento', intento: intento);
-
-              if (!AlarmViewModel.pantallaAlarmaAbierta) {
-                AlarmViewModel.pantallaAlarmaAbierta = true;
-                navigatorKey.currentState?.push(
-                    MaterialPageRoute(builder: (_) => AlarmScreen(medicamento: medicamento))
-                );
-              } else {
-                print("La pantalla ya está abierta, solo sonará el aviso.");
-              }
-              print("¡Alarma lanzada! (Minuto de reintento: $difMinutos)");
-              break;
-            }
-          }
-        }
-      }
-
-      // ==========================================
-      // BARRIDO 2: BUSCAR MEDICIONES DE PRESIÓN
-      // ==========================================
-      final listadoMediciones = await _recordatorioService.obtenerSoloMediciones();
-      for (var medicion in listadoMediciones) {
-        final String hora = medicion['hora'] ?? '';
-        final int id = medicion['id'] ?? 0;
-        final String llaveUnica = "presion_$id";
-
-        bool yaTomadaHoy = prefs.getBool("${llaveUnica}_$fechaHoy") ?? false;
-        if (yaTomadaHoy || AlarmViewModel.alarmasSilenciadas.contains(llaveUnica)) {
-          continue;
-        }
-
-        if (hora.isNotEmpty) {
-          final partes = hora.split(':');
-          if (partes.length == 2) {
-            DateTime horaProgramada = DateTime(ahora.year, ahora.month, ahora.day,
-                int.parse(partes[0]), int.parse(partes[1]));
-
-            if (horaProgramada.isBefore(AlarmViewModel.tiempoInicioApp)) continue;
-
-            DateTime ahoraLimpio = DateTime(ahora.year, ahora.month, ahora.day,
-                ahora.hour, ahora.minute);
-
-            if (ahoraLimpio.isBefore(horaProgramada)) continue;
-
-            int difMinutos = ahoraLimpio.difference(horaProgramada).inMinutes;
-
-            if (difMinutos >= 0 && difMinutos <= 30 && difMinutos % 1 == 0) {
-
-              String llaveDisparo = "${llaveUnica}_$difMinutos";
-
-              if (_alarmasDisparadas[llaveDisparo] == horaActualStr) break;
-              _alarmasDisparadas[llaveDisparo] = horaActualStr;
-
-              // Al minuto 30 sin respuesta: notificar al cuidador Y registrar no_atendido
-              if (difMinutos == 30) {
-                final String llaveCuidador = "${llaveUnica}_cuidador_notificado_$fechaHoy";
-                if (!_cuidadoresNotificados.contains(llaveCuidador)) {
-                  _cuidadoresNotificados.add(llaveCuidador);
-                  print('📲 Notificando al cuidador por presión no medida');
-                  _cuidadorService.alertaPresion(horaProgramada: hora);
-                }
-
-                // ✅ NUEVO: registrar "no_atendido" en el historial
-                final String llaveNoAtendido = "${llaveUnica}_no_atendido_$fechaHoy";
-                if (!_noAtendidosRegistrados.contains(llaveNoAtendido)) {
-                  _noAtendidosRegistrados.add(llaveNoAtendido);
-                  print('📋 Registrando medición como no_atendida: ${medicion['nombre']}');
-                  _historialService.registrarNoAtendido(
-                    idRecordatorio: id,
-                    tipo: 'medicion',
-                    nombre: medicion['nombre'] ?? 'Control de Presión',
-                    horaProgramada: hora,
-                  );
-                }
-              }
-
-              try {
-                await platform.invokeMethod('traerAlFrente');
-              } catch (e) {
-                print("No se pudo maximizar la app: $e");
-              }
-
-              NotificationService.ultimoIdProcesado = id;
-              final int intento = difMinutos == 0 ? 1 : 2;
-              await _notificationService.dispararNotificacionPantallaCompleta(
-                  medicion, 'presion', intento: intento);
-
-              if (!AlarmViewModel.pantallaAlarmaAbierta) {
-                AlarmViewModel.pantallaAlarmaAbierta = true;
-                navigatorKey.currentState?.push(
-                  MaterialPageRoute(builder: (_) => AlarmaMedicionScreen(medicion: medicion)),
-                );
-              } else {
-                print("La pantalla de presión ya está abierta, solo sonará el aviso.");
-              }
-
-              print("¡Alarma de Presión lanzada! (Minuto de reintento: $difMinutos)");
-              break;
-            }
-          }
-        }
-      }
-
-      // ==========================================
-      // BARRIDO 3: BUSCAR ACTIVIDADES (HIDRATACIÓN)
-      // ==========================================
-      final listadoActividades = await _recordatorioService.obtenerSoloActividades();
-      for (var actividad in listadoActividades) {
-        final String hora = actividad['hora'] ?? '';
-        final int id = actividad['id'] ?? 0;
-        final String llaveUnica = "actividad_${id}";
-
-        if (hora.isNotEmpty && hora.trim() == horaActualStr) {
-          if (_alarmasDisparadas[llaveUnica] == horaActualStr) continue;
-          _alarmasDisparadas[llaveUnica] = horaActualStr;
-          await _notificationService.mostrarNotificacionEstiloWhatsapp(actividad);
-          print("¡Notificación simple de Actividad enviada!");
-        }
-      }
-
-      // ==========================================
-      // BARRIDO 4: BUSCAR CITAS MÉDICAS
-      // ==========================================
-      final listadoCitas = await _recordatorioService.obtenerSoloCitas();
-      for (var cita in listadoCitas) {
-        final String hora = cita['hora'] ?? '';
-        final int id = cita['id'] ?? 0;
-        final String llaveUnica = "cita_${id}";
-
-        if (hora.isNotEmpty && hora.trim() == horaActualStr) {
-          if (_alarmasDisparadas[llaveUnica] == horaActualStr) continue;
-          _alarmasDisparadas[llaveUnica] = horaActualStr;
-          await _notificationService.mostrarNotificacionEstiloWhatsapp(cita);
-          print("¡Notificación simple de Cita Médica enviada!");
-        }
-      }
-
-    } catch (e) {
-      print("Error en el bucle continuo de alarmas: $e");
-    }
+    // Mantenida solo por compatibilidad con cualquier llamado externo viejo.
+    await sincronizarYProgramarAlarmas();
   }
+
 
   @override
   void dispose() {

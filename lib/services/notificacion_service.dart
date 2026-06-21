@@ -134,6 +134,76 @@ class NotificationService {
     );
   }
 
+  // 👇 NUEVO: programa UNA alarma (medicamento o presión) directamente en el
+  // AlarmManager del sistema, para que suene aunque la app esté cerrada.
+  // Reemplaza la lógica del Timer.periodic que vigilaba la hora en memoria.
+  Future<void> programarAlarmaDelDia(Map<String, dynamic> item, String tipoAlarma) async {
+    final String hora = item['hora'] ?? '';
+    final int id = item['id'] ?? 0;
+    if (hora.isEmpty) return;
+
+    final partes = hora.split(':');
+    if (partes.length != 2) return;
+
+    final ahora = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime horaProgramada = tz.TZDateTime(
+      tz.local, ahora.year, ahora.month, ahora.day,
+      int.parse(partes[0]), int.parse(partes[1]),
+    );
+
+    // Si la hora ya pasó hoy, no la reprogramamos para mañana acá:
+    // el listado "de hoy" se vuelve a pedir cada día desde la API.
+    if (horaProgramada.isBefore(ahora)) return;
+
+    final Int64List patronVibracion = Int64List.fromList([0, 500, 1000, 500, 1000, 500]);
+    final Int32List banderaInsistente = Int32List.fromList(<int>[4]);
+
+    String titulo = (tipoAlarma == 'presion') ? '¡Hora de tu medición!' : '¡Hora de tu medicación!';
+    String cuerpo = (tipoAlarma == 'presion')
+        ? 'Debes medirte: ${item['nombre']}'
+        : 'Debes tomar: ${item['nombre']}';
+
+    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'canal_alarma_programada_v1',
+      'Alarmas Programadas',
+      channelDescription: 'Canal de alta prioridad para asegurar la toma',
+      importance: Importance.max,
+      priority: Priority.high,
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.alarm,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: const UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+      enableVibration: true,
+      vibrationPattern: patronVibracion,
+      additionalFlags: banderaInsistente,
+      ongoing: true,
+      autoCancel: false,
+    );
+
+    final platformDetails = NotificationDetails(android: androidDetails);
+
+    final payload = {
+      ...item,
+      'tipo': tipoAlarma == 'presion' ? 'medicion' : 'medicamento',
+    };
+
+    await _notificationsPlugin.zonedSchedule(
+      id: id,
+      title: titulo,
+      body: cuerpo,
+      scheduledDate: horaProgramada,
+      notificationDetails: platformDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: jsonEncode(payload),
+    );
+    // El aviso de "no atendido" a los 30 min y la notificación al cuidador
+    // se revisan en background vía Workmanager (ver background_tasks.dart),
+    // no acá: una notificación local sola no puede "avisar al cuidador" sin
+    // que el usuario la toque.
+  }
+
   Future<void> programarRepeticionPresion(Map<String, dynamic> medicionAnterior, int minutos) async {
     final payloadData = {
       ...medicionAnterior,
@@ -179,9 +249,72 @@ class NotificationService {
     );
   }
 
+  // 👇 NUEVO: versión programada (zonedSchedule) de las notificaciones simples
+  // de actividad/cita, para que salten aunque la app esté cerrada o el
+  // teléfono se haya reiniciado. Mismo estilo visual que mostrarNotificacionEstiloWhatsapp.
+  Future<void> programarNotificacionSimpleDelDia(Map<String, dynamic> item, String tipo) async {
+    final String hora = item['hora'] ?? '';
+    if (hora.isEmpty) return;
+
+    final partes = hora.split(':');
+    if (partes.length != 2) return;
+
+    final ahora = tz.TZDateTime.now(tz.local);
+    final horaProgramada = tz.TZDateTime(
+      tz.local, ahora.year, ahora.month, ahora.day,
+      int.parse(partes[0]), int.parse(partes[1]),
+    );
+    if (horaProgramada.isBefore(ahora)) return;
+
+    // Offset para no chocar con ids de medicamentos/mediciones
+    final int idBase = item['id'] ?? 0;
+    final int id = tipo == 'cita' ? idBase + 3000000 : idBase + 2000000;
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'canal_actividades_v1',
+      'Actividades Simples',
+      channelDescription: 'Notificaciones normales estilo mensaje',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    String titulo = '¡Recordatorio!';
+    if (tipo == 'cita') {
+      titulo = '📅 ¡Tienes una Cita Médica!';
+    } else if (tipo == 'actividad') {
+      titulo = '💧 ¡Hora de tu Actividad!';
+    }
+
+    String cuerpo = item['nombre'] ?? 'Revisa tu aplicación';
+    if (item['detalle'] != null) {
+      cuerpo = '$cuerpo: ${item['detalle']}';
+    }
+
+    final payload = {...item, 'tipo': tipo};
+
+    await _notificationsPlugin.zonedSchedule(
+      id: id,
+      title: titulo,
+      body: cuerpo,
+      scheduledDate: horaProgramada,
+      notificationDetails: const NotificationDetails(android: androidDetails),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: jsonEncode(payload),
+    );
+  }
+
   Future<void> apagarAlarmas() async {
-    // Destruye todas las notificaciones activas para cortar el sonido/vibración
-    await _notificationsPlugin.cancelAll();
+    // ⚠️ Ya NO usa cancelAll(): con zonedSchedule, eso borraría también las
+    // alarmas futuras del día (no solo la que está sonando ahora).
+    // Si se llama sin id, no hace nada (compatibilidad con llamadas viejas).
+  }
+
+  // Corta el sonido/vibración de UNA alarma puntual y su aviso de "no atendido" asociado.
+  Future<void> apagarAlarma(int id) async {
+    await _notificationsPlugin.cancel(id: id);
+    await _notificationsPlugin.cancel(id: id + 900000); // aviso de no atendido
   }
 
   // Función que tira el mensaje instantáneamente
