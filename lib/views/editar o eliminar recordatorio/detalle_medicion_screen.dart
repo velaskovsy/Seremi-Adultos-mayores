@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // 👈 IMPORTANTE: Agregado el import de SVG
+import 'package:flutter_svg/flutter_svg.dart';
+import '../../services/medicion_service.dart';
+import 'editar_medicion_screen.dart';
 
-class DetalleMedicionScreen extends StatelessWidget {
+class DetalleMedicionScreen extends StatefulWidget {
   final Map<String, dynamic> medicion;
 
   const DetalleMedicionScreen({
     Key? key,
     required this.medicion,
   }) : super(key: key);
+
+  @override
+  State<DetalleMedicionScreen> createState() => _DetalleMedicionScreenState();
+}
+
+class _DetalleMedicionScreenState extends State<DetalleMedicionScreen> {
+  final MedicionService _medicionService = MedicionService();
+  bool _eliminando = false;
 
   static const Color colorPrimario = Color(0xFF000080);
   static const Color colorFondo = Colors.white;
@@ -16,20 +26,58 @@ class DetalleMedicionScreen extends StatelessWidget {
   static const Color botonEditar = Color(0xFF2196F3);
   static const Color botonEliminar = Color(0xFFD32F2F);
 
+  Future<void> _confirmarEliminar(BuildContext context, int id) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text('¿Eliminar recordatorio?', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        content: const Text('Se eliminará esta medición. Esta acción no se puede deshacer.', style: TextStyle(fontSize: 18)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar', style: TextStyle(fontSize: 18, color: colorPrimario)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar', style: TextStyle(fontSize: 18, color: botonEliminar, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true) return;
+
+    setState(() => _eliminando = true);
+    final exito = await _medicionService.eliminarMedicion(id);
+    if (!context.mounted) return;
+    setState(() => _eliminando = false);
+
+    if (exito) {
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo eliminar el recordatorio. Intenta de nuevo.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ── DATOS REALES (vienen todos desde el endpoint /hoy) ──
-    final String nombre          = medicion['nombre']        ?? '';
-    final String hora            = medicion['hora']          ?? '00:00';
-    final String frecuencia      = medicion['frecuencia']    ?? '';
-    final String instrucciones   = medicion['detalle']       ?? medicion['instrucciones'] ?? '';
-    final String fotoInstrumento = medicion['url_foto']      ?? '';
+    final medicion = widget.medicion;
+
+    final int? id            = medicion['id'] is int ? medicion['id'] : int.tryParse(medicion['id']?.toString() ?? '');
+    final String nombre      = medicion['nombre']        ?? '';
+    final String hora        = medicion['hora']          ?? '00:00';
+    final String frecuencia  = medicion['frecuencia']    ?? '';
+    final String instrucciones = medicion['detalle']     ?? medicion['instrucciones'] ?? '';
+    final String fotoInstrumento = medicion['url_foto']  ?? '';
 
     return Scaffold(
       backgroundColor: colorFondo,
       body: Column(
         children: [
-          // ── HEADER PERSONALIZADO ──
+          // ── HEADER ──
           Container(
             width: double.infinity,
             height: 135,
@@ -38,43 +86,28 @@ class DetalleMedicionScreen extends StatelessWidget {
               padding: const EdgeInsets.only(top: 40),
               child: Row(
                 children: [
-                  // Botón Volver
                   Padding(
                     padding: const EdgeInsets.only(left: 16),
                     child: GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 46,
-                        height: 46,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
+                        width: 46, height: 46,
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
                         child: const Icon(Icons.arrow_back, color: Color(0xFF000080), size: 28),
                       ),
                     ),
                   ),
-                  // Título centrado
                   const Expanded(
-                    child: Text(
-                      'Detalle del evento',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 24,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text('Detalle del evento', textAlign: TextAlign.center,
+                        style: TextStyle(fontFamily: 'Roboto', fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
-                  // Espaciador invisible para equilibrar
                   const SizedBox(width: 62),
                 ],
               ),
             ),
           ),
 
-          // ── CONTENIDO PRINCIPAL ──
+          // ── CONTENIDO ──
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -82,19 +115,12 @@ class DetalleMedicionScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-
-                    // ── HEADER: ICONO Y NOMBRE ──
                     Column(
                       children: [
                         Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD32F2F), // Rojo
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                          width: 100, height: 100,
+                          decoration: BoxDecoration(color: const Color(0xFFD32F2F), borderRadius: BorderRadius.circular(20)),
                           padding: const EdgeInsets.all(16),
-                          // 👇 AQUÍ ESTÁ TU SVG DE CARDIOGRAMA 👇
                           child: SvgPicture.asset(
                             'assets/imagenes/iconos/heart-cardiogram.svg',
                             colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
@@ -102,29 +128,14 @@ class DetalleMedicionScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Text(
-                          nombre,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
+                        Text(nombre, textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black)),
                       ],
                     ),
 
                     const SizedBox(height: 30),
 
-                    // ── SECCIÓN: DETALLES ──
-                    const Text(
-                      'DETALLES',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
+                    const Text('DETALLES', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
                     const SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
@@ -135,24 +146,17 @@ class DetalleMedicionScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           _buildDetalleFila('Hora del\nrecordatorio', hora),
-                          const Divider(color: colorGrisBorde, thickness: 2, height: 0),
-                          _buildDetalleFila('Frecuencia', frecuencia),
+                          if (frecuencia.isNotEmpty) ...[
+                            const Divider(color: colorGrisBorde, thickness: 2, height: 0),
+                            _buildDetalleFila('Frecuencia', frecuencia),
+                          ],
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 30),
-
-                    // ── SECCIÓN: INSTRUCCIONES ──
                     if (instrucciones.isNotEmpty) ...[
-                      const Text(
-                        'INSTRUCCIONES',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
+                      const SizedBox(height: 30),
+                      const Text('INSTRUCCIONES', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
                       const SizedBox(height: 10),
                       Container(
                         width: double.infinity,
@@ -162,68 +166,62 @@ class DetalleMedicionScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.black, width: 3),
                         ),
-                        child: Text(
-                          instrucciones,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: colorPrimario,
-                          ),
-                        ),
+                        child: Text(instrucciones, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: colorPrimario)),
                       ),
-                      const SizedBox(height: 30),
                     ],
 
-                    // ── SECCIÓN: FOTO ──
-                    const Text(
-                      'FOTO',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
+                    const SizedBox(height: 30),
+                    const Text('FOTO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
                     const SizedBox(height: 10),
-                    // Ahora es una sola caja que ocupa todo el ancho
                     _buildFotoCard('INSTRUMENTO', fotoInstrumento),
 
                     const SizedBox(height: 40),
 
-                    // ── BOTONES DE ACCIÓN ──
+                    // Botón Editar
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: id == null
+                          ? null
+                          : () async {
+                              final editado = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditarMedicionScreen(
+                                    id: id,
+                                    nombre: nombre,
+                                    hora: hora,
+                                    instrucciones: instrucciones.isNotEmpty ? instrucciones : null,
+                                    urlFoto: fotoInstrumento.isNotEmpty ? fotoInstrumento : null,
+                                  ),
+                                ),
+                              );
+                              if (editado == true && context.mounted) {
+                                Navigator.pop(context, true);
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEditar,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 65),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4, // 👈 SOMBRITA AGREGADA
+                        elevation: 4,
                       ),
-                      child: const Text(
-                        'Editar recordatorio',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold, // 👈 TEXTO EN NEGRITA
-                        ),
-                      ),
+                      child: const Text('Editar recordatorio', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 16),
+
+                    // Botón Eliminar
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: (id == null || _eliminando) ? null : () => _confirmarEliminar(context, id),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEliminar,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 65),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4, // 👈 SOMBRITA AGREGADA
+                        elevation: 4,
                       ),
-                      child: const Text(
-                        'Eliminar recordatorio',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold, // 👈 TEXTO EN NEGRITA
-                        ),
-                      ),
+                      child: _eliminando
+                          ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                          : const Text('Eliminar recordatorio', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -242,29 +240,10 @@ class DetalleMedicionScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Text(
-              etiqueta,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              valor,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: colorPrimario,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Expanded(child: Text(etiqueta, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black))),
+          Flexible(child: Text(valor, textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: colorPrimario),
+              maxLines: 2, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -284,20 +263,10 @@ class DetalleMedicionScreen extends StatelessWidget {
             child: Center(
               child: rutaFoto.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
-                      child: Image.network(
-                        rutaFoto,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        loadingBuilder: (context, child, progress) =>
-                            progress == null ? child : const CircularProgressIndicator(),
-                        errorBuilder: (context, error, stack) =>
-                            Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey.shade500),
-                      ),
+                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                      child: Image.network(rutaFoto, fit: BoxFit.cover, width: double.infinity, height: double.infinity,
+                          loadingBuilder: (context, child, progress) => progress == null ? child : const CircularProgressIndicator(),
+                          errorBuilder: (context, error, stack) => Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey.shade500)),
                     )
                   : Icon(Icons.camera_alt_outlined, size: 70, color: Colors.grey.shade500),
             ),
@@ -305,18 +274,9 @@ class DetalleMedicionScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.grey.shade500, width: 2)),
-            ),
-            child: Text(
-              etiqueta,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: colorPrimario,
-              ),
-            ),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade500, width: 2))),
+            child: Text(etiqueta, textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colorPrimario)),
           ),
         ],
       ),

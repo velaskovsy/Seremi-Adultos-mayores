@@ -54,4 +54,56 @@ class ActivityService {
       return false;
     }
   }
+
+  /// Edita una toma individual de actividad.
+  /// PUT /api/recordatorios/:id
+  Future<bool> editarActividad({
+    required int id,
+    required String hora,
+    String? detalle,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final body = <String, dynamic>{'hora': hora};
+      if (detalle != null && detalle.trim().isNotEmpty) {
+        body['detalle'] = detalle.trim();
+      }
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/api/recordatorios/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Elimina (desactiva) una toma individual de actividad.
+  /// DELETE /api/recordatorios/:id
+  Future<bool> eliminarActividad(int id) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/api/recordatorios/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }

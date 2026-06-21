@@ -50,4 +50,60 @@ class MedicionService {
       return false;
     }
   }
+
+  /// Edita una toma individual de medición.
+  /// PUT /api/recordatorios/:id
+  Future<bool> editarMedicion({
+    required int id,
+    required String hora,
+    String? instrucciones,
+    String? urlFoto,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final body = <String, dynamic>{'hora': hora};
+      if (instrucciones != null && instrucciones.trim().isNotEmpty) {
+        body['instrucciones'] = instrucciones.trim();
+      }
+      if (urlFoto != null) {
+        body['url_foto'] = urlFoto;
+      }
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/api/recordatorios/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Elimina (desactiva) una toma individual de medición.
+  /// DELETE /api/recordatorios/:id
+  Future<bool> eliminarMedicion(int id) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/api/recordatorios/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }

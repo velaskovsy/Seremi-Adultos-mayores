@@ -43,4 +43,67 @@ class CitaMedicaService {
       return false;
     }
   }
+
+  /// Edita una cita médica existente.
+  /// PUT /api/recordatorios/:id
+  Future<bool> editarCita({
+    required int id,
+    required String hora,
+    required String lugar,
+    required String profesional,
+    String? notas,
+    DateTime? fecha,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final body = <String, dynamic>{
+        'hora': hora,
+        'lugar': lugar,
+        'profesional': profesional,
+      };
+      if (notas != null && notas.trim().isNotEmpty) {
+        body['notas'] = notas.trim();
+      }
+      if (fecha != null) {
+        body['fecha'] =
+            '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
+      }
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/api/recordatorios/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Elimina (desactiva) una cita médica.
+  /// DELETE /api/recordatorios/:id
+  Future<bool> eliminarCita(int id) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/api/recordatorios/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }

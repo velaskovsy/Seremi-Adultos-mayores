@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // 👈 IMPORTANTE: Agregado el import de SVG
+import 'package:flutter_svg/flutter_svg.dart';
+import '../../services/activity_service.dart';
+import 'editar_actividad_screen.dart';
 
-class DetalleActividadScreen extends StatelessWidget {
+class DetalleActividadScreen extends StatefulWidget {
   final Map<String, dynamic> actividad;
 
   const DetalleActividadScreen({
     Key? key,
     required this.actividad,
   }) : super(key: key);
+
+  @override
+  State<DetalleActividadScreen> createState() => _DetalleActividadScreenState();
+}
+
+class _DetalleActividadScreenState extends State<DetalleActividadScreen> {
+  final ActivityService _actividadService = ActivityService();
+  bool _eliminando = false;
 
   static const Color colorPrimario = Color(0xFF000080);
   static const Color colorFondo = Colors.white;
@@ -16,18 +26,56 @@ class DetalleActividadScreen extends StatelessWidget {
   static const Color botonEditar = Color(0xFF2196F3);
   static const Color botonEliminar = Color(0xFFD32F2F);
 
+  Future<void> _confirmarEliminar(BuildContext context, int id) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text('¿Eliminar recordatorio?', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        content: const Text('Se eliminará esta toma de actividad. Esta acción no se puede deshacer.', style: TextStyle(fontSize: 18)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar', style: TextStyle(fontSize: 18, color: colorPrimario)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar', style: TextStyle(fontSize: 18, color: botonEliminar, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true) return;
+
+    setState(() => _eliminando = true);
+    final exito = await _actividadService.eliminarActividad(id);
+    if (!context.mounted) return;
+    setState(() => _eliminando = false);
+
+    if (exito) {
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo eliminar el recordatorio. Intenta de nuevo.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ── DATOS REALES ──
-    final String nombre = actividad['nombre'] ?? 'Actividad';
-    final String hora = actividad['hora'] ?? '00:00';
-    final String detalle = actividad['detalle'] ?? '1 vaso';
+    final actividad = widget.actividad;
+
+    final int? id     = actividad['id'] is int ? actividad['id'] : int.tryParse(actividad['id']?.toString() ?? '');
+    final String nombre  = actividad['nombre']  ?? 'Actividad';
+    final String hora    = actividad['hora']    ?? '00:00';
+    final String detalle = actividad['detalle'] ?? '';
 
     return Scaffold(
       backgroundColor: colorFondo,
       body: Column(
         children: [
-          // ── HEADER PERSONALIZADO ──
+          // ── HEADER ──
           Container(
             width: double.infinity,
             height: 135,
@@ -41,27 +89,15 @@ class DetalleActividadScreen extends StatelessWidget {
                     child: GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 46,
-                        height: 46,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
+                        width: 46, height: 46,
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
                         child: const Icon(Icons.arrow_back, color: Color(0xFF000080), size: 28),
                       ),
                     ),
                   ),
                   const Expanded(
-                    child: Text(
-                      'Detalle del evento',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 24,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text('Detalle del evento', textAlign: TextAlign.center,
+                        style: TextStyle(fontFamily: 'Roboto', fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 62),
                 ],
@@ -69,7 +105,7 @@ class DetalleActividadScreen extends StatelessWidget {
             ),
           ),
 
-          // ── CONTENIDO PRINCIPAL ──
+          // ── CONTENIDO ──
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -77,50 +113,29 @@ class DetalleActividadScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-
-                    // ── HEADER: ICONO Y NOMBRE ──
+                    // Icono y nombre
                     Column(
                       children: [
                         Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFB200FF), // Morado
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                          width: 100, height: 100,
+                          decoration: BoxDecoration(color: const Color(0xFFB200FF), borderRadius: BorderRadius.circular(20)),
                           padding: const EdgeInsets.all(16),
-                          // 👇 AQUÍ ESTÁ TU SVG 'walking.svg' 👇
                           child: SvgPicture.asset(
                             'assets/imagenes/iconos/walking.svg',
                             colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                            // Fallback por si no carga el SVG
                             placeholderBuilder: (context) => const Icon(Icons.directions_walk, color: Colors.white, size: 60),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Text(
-                          nombre,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
+                        Text(nombre, textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black)),
                       ],
                     ),
 
                     const SizedBox(height: 40),
 
-                    // ── SECCIÓN: DETALLES ──
-                    const Text(
-                      'DETALLES',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
+                    // Detalles
+                    const Text('DETALLES', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
                     const SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
@@ -131,17 +146,36 @@ class DetalleActividadScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           _buildDetalleFila('Hora del\nrecordatorio', hora),
-                          const Divider(color: colorGrisBorde, thickness: 2, height: 0),
-                          _buildDetalleFila('Cantidad', detalle),
+                          if (detalle.isNotEmpty) ...[
+                            const Divider(color: colorGrisBorde, thickness: 2, height: 0),
+                            _buildDetalleFila('Cantidad', detalle),
+                          ],
                         ],
                       ),
                     ),
 
                     const SizedBox(height: 50),
 
-                    // ── BOTONES DE ACCIÓN ──
+                    // Botón Editar
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: id == null
+                          ? null
+                          : () async {
+                              final editado = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditarActividadScreen(
+                                    id: id,
+                                    nombre: nombre,
+                                    hora: hora,
+                                    detalle: detalle.isNotEmpty ? detalle : null,
+                                  ),
+                                ),
+                              );
+                              if (editado == true && context.mounted) {
+                                Navigator.pop(context, true);
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEditar,
                         foregroundColor: Colors.white,
@@ -149,14 +183,13 @@ class DetalleActividadScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 4,
                       ),
-                      child: const Text(
-                        'Editar recordatorio',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                      ),
+                      child: const Text('Editar recordatorio', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 16),
+
+                    // Botón Eliminar
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: (id == null || _eliminando) ? null : () => _confirmarEliminar(context, id),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEliminar,
                         foregroundColor: Colors.white,
@@ -164,10 +197,9 @@ class DetalleActividadScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 4,
                       ),
-                      child: const Text(
-                        'Eliminar recordatorio',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                      ),
+                      child: _eliminando
+                          ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                          : const Text('Eliminar recordatorio', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -186,29 +218,10 @@ class DetalleActividadScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Text(
-              etiqueta,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              valor,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: colorPrimario,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Expanded(child: Text(etiqueta, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black))),
+          Flexible(child: Text(valor, textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: colorPrimario),
+              maxLines: 2, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
