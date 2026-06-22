@@ -124,7 +124,7 @@ class MedicamentoService {
     return true; // el usuario no nota la diferencia
   }
 
-  // ── Editar ────────────────────────────────────────────────────
+  // ── Editar (una toma individual por id de Railway) ────────────
   Future<bool> editarMedicamento({
     required int id, // id de Railway (o id_local si es offline)
     required String hora,
@@ -180,7 +180,85 @@ class MedicamentoService {
     return true;
   }
 
-  // ── Eliminar ──────────────────────────────────────────────────
+  // ── Editar grupo (todas las tomas futuras de un grupo) ────────
+  Future<bool> editarGrupoMedicamento({
+    required String grupoId,
+    required String nombre,
+    required String dosis,
+    required String hora,
+    required DateTime fecha,
+    String? intervalo,
+    String? instrucciones,
+    String? urlFotoCaja,
+    String? urlFotoRemedio,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    final body = <String, dynamic>{
+      'nombre':       nombre,
+      'dosis':        dosis,
+      'hora':         hora,
+      'fecha_inicio': _soloFecha(fecha),
+    };
+    if (intervalo != null && intervalo.trim().isNotEmpty)
+      body['intervalo'] = intervalo;
+    if (instrucciones != null && instrucciones.trim().isNotEmpty)
+      body['instrucciones'] = instrucciones;
+    if (urlFotoCaja != null)    body['url_foto_caja']    = urlFotoCaja;
+    if (urlFotoRemedio != null) body['url_foto_remedio'] = urlFotoRemedio;
+
+    // Actualizar en SQLite: marcar todas las tomas del grupo como no sincronizadas
+    final db = await _db.database;
+    await db.update(
+      'recordatorios',
+      {
+        'nombre':           nombre,
+        'dosis':            dosis,
+        'hora_inicio':      hora,
+        'intervalo':        intervalo,
+        'instrucciones':    instrucciones,
+        'url_foto_caja':    urlFotoCaja,
+        'url_foto_remedio': urlFotoRemedio,
+        'sincronizado':     0,
+      },
+      where: 'grupo_id = ? AND activo = 1',
+      whereArgs: [grupoId],
+    );
+
+    final online = await _connectivity.hayInternet();
+    if (online) {
+      try {
+        final res = await http.put(
+          Uri.parse('$_baseUrl/api/recordatorios/grupo/$grupoId'),
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        ).timeout(const Duration(seconds: 10));
+
+        if (res.statusCode == 200) {
+          await db.update(
+            'recordatorios',
+            {'sincronizado': 1},
+            where: 'grupo_id = ? AND activo = 1',
+            whereArgs: [grupoId],
+          );
+        }
+        return res.statusCode == 200;
+      } catch (_) {}
+    }
+
+    // Encolar para cuando haya internet
+    await _db.encolarOperacion(
+      operacion: 'editar_grupo_medicamento',
+      payload:   {'grupo_id': grupoId, ...body},
+    );
+    return true;
+  }
+
+  // ── Eliminar (una toma individual por id de Railway) ──────────
   Future<bool> eliminarMedicamento(int id) async {
     final token = await _authService.getToken();
     if (token == null) return false;
@@ -208,5 +286,41 @@ class MedicamentoService {
       payload:   {'id_railway': id},
     );
     return true;
+  }
+
+  // ── Eliminar grupo (todas las tomas de un grupo) ──────────────
+  Future<bool> eliminarGrupoMedicamento(String grupoId) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    // Soft delete de todas las tomas del grupo en SQLite
+    final db = await _db.database;
+    await db.update(
+      'recordatorios',
+      {'activo': 0},
+      where: 'grupo_id = ?',
+      whereArgs: [grupoId],
+    );
+
+    final online = await _connectivity.hayInternet();
+    if (online) {
+      try {
+        final res = await http.delete(
+          Uri.parse('$_baseUrl/api/recordatorios/grupo/$grupoId'),
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ).timeout(const Duration(seconds: 10));
+        return res.statusCode == 200;
+      } catch (_) {}
+    }
+
+    // Encolar para cuando haya internet
+    await _db.encolarOperacion(
+      operacion: 'eliminar_grupo_medicamento',
+      payload:   {'grupo_id': grupoId},
+    );
+    return true; // offline-first: el usuario no nota la diferencia
   }
 }
