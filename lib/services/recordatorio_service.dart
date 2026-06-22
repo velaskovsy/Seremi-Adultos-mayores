@@ -10,7 +10,6 @@ class RecordatorioService {
   static const String _baseUrl =
       'https://servidorappseremi-production.up.railway.app';
   static const String _tokenKey = 'auth_token';
-  // Cache de SharedPreferences mantenido por compatibilidad con código existente
   static const String _localMedicamentosKey = 'local_medicamentos_hoy';
 
   final DBHelper _db = DBHelper();
@@ -29,6 +28,30 @@ class RecordatorioService {
     return 'noche';
   }
 
+  // FIX 1: Calcula el color igual que el backend (COLOR_TIPO)
+  String _colorParaTipo(String? tipo) {
+    switch (tipo) {
+      case 'medicamento': return 'verde';
+      case 'actividad':   return 'morado';
+      case 'medicion':    return 'rojo';
+      case 'cita':        return 'azul';
+      default:            return 'gris';
+    }
+  }
+
+  // FIX 2: Calcula la próxima tarea igual que el backend
+  String? _calcularProximaTarea(List<Map<String, dynamic>> lista) {
+    final ahora = DateTime.now();
+    final horaActual =
+        '${ahora.hour.toString().padLeft(2, '0')}:${ahora.minute.toString().padLeft(2, '0')}';
+
+    for (final r in lista) {
+      final hora = r['hora_inicio'] as String? ?? '';
+      if (hora.compareTo(horaActual) > 0) return hora;
+    }
+    return null;
+  }
+
   Map<String, dynamic> _recordatorioAFranja(
       List<Map<String, dynamic>> lista) {
     final franjas = <String, List<Map<String, dynamic>>>{
@@ -37,11 +60,13 @@ class RecordatorioService {
       'noche':  [],
     };
     for (final r in lista) {
+      final tipo   = r['tipo'] as String?;
       final franja = _calcularFranja(r['hora_inicio'] as String? ?? '00:00');
       franjas[franja]!.add({
         'id':               r['id_railway'] ?? r['id_local'],
         'id_local':         r['id_local'],
-        'tipo':             r['tipo'],
+        'tipo':             tipo,
+        'color':            _colorParaTipo(tipo), // FIX 1
         'nombre':           r['nombre'],
         'detalle':          r['detalle'],
         'dosis':            r['dosis'],
@@ -57,7 +82,14 @@ class RecordatorioService {
         'sincronizado':     r['sincronizado'],
       });
     }
-    return {'franjas': franjas};
+
+    // FIX 2: calcular proxima_tarea desde la lista ordenada
+    final proximaTarea = _calcularProximaTarea(lista);
+
+    return {
+      'proxima_tarea': proximaTarea,
+      'franjas': franjas,
+    };
   }
 
   // ── Obtener hoy ───────────────────────────────────────────────
@@ -69,10 +101,8 @@ class RecordatorioService {
     final online = await _connectivity.hayInternet();
 
     if (online) {
-      // Intentar desde Railway
       final data = await _obtenerHoyOnline();
       if (data != null) {
-        // Cachear en SharedPreferences (compatibilidad)
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_localMedicamentosKey, jsonEncode(data));
         return data;
@@ -158,7 +188,7 @@ class RecordatorioService {
       } catch (_) {}
     }
 
-    // Fallback local
+    // Fallback local — con color y proxima_tarea calculados
     final lista = await _db.getRecordatoriosDia(rut, fechaStr);
     return _recordatorioAFranja(lista);
   }
