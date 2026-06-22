@@ -65,6 +65,45 @@ class HistorialService {
   final AuthService _authService = AuthService();
   final ConnectivityService _connectivity = ConnectivityService();
 
+  // ── Resuelve el id_railway real de un recordatorio ────────────
+  // El viewmodel pasa 'id' que puede ser id_railway o id_local
+  // (cuando el recordatorio fue creado offline y aún no se sincronizó).
+  // Esta función retorna el id_railway real, o null si aún no está en Railway.
+  // Así evitamos mandar un id_local al servidor, que causa FK violation.
+  Future<int?> _resolverIdRailway(int? idRecordatorio) async {
+    if (idRecordatorio == null) return null;
+
+    final db = await _db.database;
+
+    // Primero intentar: ¿existe un recordatorio con id_railway = idRecordatorio?
+    // (esto ocurre cuando el recordatorio ya está sincronizado y 'id' es su id_railway)
+    final porRailway = await db.query(
+      'recordatorios',
+      columns: ['id_railway'],
+      where: 'id_railway = ?',
+      whereArgs: [idRecordatorio],
+      limit: 1,
+    );
+    if (porRailway.isNotEmpty) {
+      return porRailway.first['id_railway'] as int?;
+    }
+
+    // Si no, buscar por id_local (recordatorio creado offline, 'id' es el id_local)
+    final porLocal = await db.query(
+      'recordatorios',
+      columns: ['id_railway'],
+      where: 'id_local = ?',
+      whereArgs: [idRecordatorio],
+      limit: 1,
+    );
+    if (porLocal.isNotEmpty) {
+      // Puede ser null si aún no se sincronizó con Railway
+      return porLocal.first['id_railway'] as int?;
+    }
+
+    return null;
+  }
+
   // ── Registrar medicamento tomado ──────────────────────────────
   Future<bool> registrarMedicamento({
     int? idRecordatorio,
@@ -78,18 +117,25 @@ class HistorialService {
     final token = await _authService.getToken();
     if (token == null) return false;
 
+    // Resolver el id_railway real (null si el recordatorio aún no se sincronizó)
+    final idRailway = await _resolverIdRailway(idRecordatorio);
+
     final ahora = DateTime.now().toIso8601String();
     final payload = <String, dynamic>{
-      'id_recordatorio': idRecordatorio,
+      'id_recordatorio': idRailway, // null si el recordatorio aún no se sincronizó
       'nombre':          nombre,
       'hora_programada': horaProgramada,
       'estado':          estado,
+      // Si id_railway es null pero tenemos el id_local del recordatorio,
+      // lo guardamos para que sync_service lo resuelva al momento de subir
+      if (idRailway == null && idRecordatorio != null)
+        'id_recordatorio_local': idRecordatorio,
     };
 
-    // Guardar en SQLite siempre (inmediato)
+    // Guardar en SQLite siempre (inmediato) — guardamos el id_local original
     final idLocal = await _db.insertarHistorial({
       'rut_usuario':     rut,
-      'id_recordatorio': idRecordatorio,
+      'id_recordatorio': idRecordatorio, // guardamos el id_local en SQLite (solo local)
       'tipo':            'medicamento',
       'nombre':          nombre,
       'hora_programada': horaProgramada,
@@ -111,7 +157,6 @@ class HistorialService {
         ).timeout(const Duration(seconds: 10));
 
         if (res.statusCode == 201) {
-          // Marcar como sincronizado
           final db = await _db.database;
           await db.update(
             'historial_cumplimiento',
@@ -124,7 +169,7 @@ class HistorialService {
       } catch (_) {}
     }
 
-    // Encolar para sincronizar después
+    // Encolar para sincronizar después (payload ya tiene id_railway correcto o null)
     await _db.encolarOperacion(
       operacion:  'crear_historial_medicamento',
       payload:    payload,
@@ -147,26 +192,38 @@ class HistorialService {
     final token = await _authService.getToken();
     if (token == null) return false;
 
+    // Resolver el id_railway real (null si el recordatorio aún no se sincronizó)
+    final idRailway = await _resolverIdRailway(idRecordatorio);
+
+    // Normalizar valor_presion: si es no_tomado, enviar null en lugar de ''
+    final valorFinal = (estado == 'no_tomado' || valorPresion.isEmpty)
+        ? null
+        : valorPresion;
+
     final ahora = DateTime.now().toIso8601String();
     final payload = <String, dynamic>{
-      'id_recordatorio': idRecordatorio,
+      'id_recordatorio': idRailway, // null si el recordatorio aún no se sincronizó
       'nombre':          nombre,
       'hora_programada': horaProgramada,
-      'valor_presion':   valorPresion,
+      'valor_presion':   valorFinal,
       'estado':          estado,
+      // Si id_railway es null pero tenemos el id_local del recordatorio,
+      // lo guardamos para que sync_service lo resuelva al momento de subir
+      if (idRailway == null && idRecordatorio != null)
+        'id_recordatorio_local': idRecordatorio,
     };
 
     // Calcular nivel localmente (misma lógica que el backend)
-    final nivel = _calcularNivelPresion(valorPresion);
+    final nivel = valorFinal != null ? _calcularNivelPresion(valorFinal) : null;
 
     final idLocal = await _db.insertarHistorial({
       'rut_usuario':     rut,
-      'id_recordatorio': idRecordatorio,
+      'id_recordatorio': idRecordatorio, // guardamos el id_local en SQLite (solo local)
       'tipo':            'medicion',
       'nombre':          nombre,
       'hora_programada': horaProgramada,
       'estado':          estado,
-      'valor_presion':   valorPresion,
+      'valor_presion':   valorFinal,
       'nivel_presion':   nivel,
       'fecha_hora':      ahora,
       'sincronizado':    0,
@@ -217,7 +274,7 @@ class HistorialService {
         idRecordatorio: idRecordatorio,
         nombre:         nombre,
         horaProgramada: horaProgramada,
-        valorPresion:   '',
+        valorPresion:   '',   // se normaliza a null dentro de registrarMedicion
         estado:         'no_tomado',
       );
     } else {

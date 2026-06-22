@@ -214,18 +214,20 @@ class SyncService {
 
       // ── Registrar historial ─────────────────────────────────
       case 'crear_historial_medicamento':
+        final payloadMed = await _resolverIdRecordatorioEnPayload(payload);
         final res = await http.post(
           Uri.parse('$_baseUrl/api/historial/medicamento'),
           headers: headers,
-          body: jsonEncode(payload),
+          body: jsonEncode(payloadMed),
         ).timeout(const Duration(seconds: 10));
         return res.statusCode == 201;
 
       case 'crear_historial_medicion':
+        final payloadMedicion = await _resolverIdRecordatorioEnPayload(payload);
         final res = await http.post(
           Uri.parse('$_baseUrl/api/historial/medicion'),
           headers: headers,
-          body: jsonEncode(payload),
+          body: jsonEncode(payloadMedicion),
         ).timeout(const Duration(seconds: 10));
         return res.statusCode == 201;
 
@@ -238,6 +240,36 @@ class SyncService {
   // ══════════════════════════════════════════════════════════════
   // BAJADA: Railway → SQLite local
   // ══════════════════════════════════════════════════════════════
+
+
+  // ── Resuelve id_recordatorio en payload de historial ─────────
+  // Si el payload tiene 'id_recordatorio_local', intenta obtener el
+  // id_railway que ya le asignó Railway (el recordatorio debió subirse
+  // antes en la misma pasada de _procesarCola).
+  // Retorna el payload listo para enviar al servidor.
+  Future<Map<String, dynamic>> _resolverIdRecordatorioEnPayload(
+      Map<String, dynamic> payload) async {
+    final idLocal = payload['id_recordatorio_local'] as int?;
+    if (idLocal == null) return payload; // ya tiene id_railway o es null
+
+    final db = await _db.database;
+    final rows = await db.query(
+      'recordatorios',
+      columns: ['id_railway'],
+      where: 'id_local = ?',
+      whereArgs: [idLocal],
+      limit: 1,
+    );
+
+    final idRailway = rows.isNotEmpty ? rows.first['id_railway'] as int? : null;
+
+    // Construir payload final: reemplazar id_recordatorio con el railway real
+    // y eliminar la clave auxiliar id_recordatorio_local
+    return {
+      ...payload,
+      'id_recordatorio': idRailway,
+    }..remove('id_recordatorio_local');
+  }
 
   Future<void> _pullDesdeRailway(String token, String rut) async {
     await Future.wait([
