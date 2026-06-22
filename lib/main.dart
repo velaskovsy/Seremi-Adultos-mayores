@@ -15,6 +15,8 @@ import 'viewmodels/add_medication_viewmodel.dart';
 import 'views/login/login_screen.dart';
 import 'package:flutter/services.dart';
 import 'services/notificacion_service.dart';
+import 'services/sync_service.dart';
+import 'database/db_helper.dart';
 import 'views/alarma_medicacion/alarma_medicacion_screen.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -28,6 +30,9 @@ void main() async {
     url: 'https://wtecnjrxjyynbnjkehso.supabase.co',
     anonKey: 'sb_publishable_gc6MXA9NgoYsWW5u8-6c8w_GzLUwfKR',
   );
+
+  // Inicializar la base de datos SQLite local (offline-first)
+  await DBHelper().database;
 
   // Inicializar el canal nativo de notificaciones
   await NotificationService().initNotification();
@@ -69,6 +74,11 @@ void main() async {
       child: MyApp(pantallaInicial: pantallaInicial),
     ),
   );
+
+  // Iniciar sincronización automática cuando vuelve el internet
+  SyncService().iniciarEscucha();
+  // Sincronizar al arrancar la app (por si hay cosas pendientes)
+  SyncService().sincronizar();
 }
 
 class MyApp extends StatelessWidget {

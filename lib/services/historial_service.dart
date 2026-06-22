@@ -1,18 +1,19 @@
-// lib/services/historial_service.dart
+// lib/services/historial_service.dart — offline-first
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../database/db_helper.dart';
 import 'auth_service.dart';
+import 'connectivity_service.dart';
 
-/// Un registro individual del historial (medicamento tomado o medición de presión)
 class HistorialItem {
   final int idHistorial;
   final int? idRecordatorio;
-  final String tipo; // 'medicamento' | 'medicion'
+  final String tipo;
   final String nombre;
   final String? horaProgramada;
-  final String estado; // 'tomado' | 'no_tomado'
+  final String estado;
   final String? valorPresion;
-  final String? nivelPresion; // 'normal' | 'elevado' | 'critico'
+  final String? nivelPresion;
   final DateTime fechaHora;
 
   HistorialItem({
@@ -29,187 +30,283 @@ class HistorialItem {
 
   factory HistorialItem.fromJson(Map<String, dynamic> json) {
     return HistorialItem(
-      idHistorial:     json['id_historial'] as int,
-      idRecordatorio:  json['id_recordatorio'] as int?,
-      tipo:            json['tipo'] as String,
-      nombre:          json['nombre'] as String,
-      horaProgramada:  json['hora_programada'] as String?,
-      estado:          json['estado'] as String,
-      valorPresion:    json['valor_presion'] as String?,
-      nivelPresion:    json['nivel_presion'] as String?,
-      fechaHora:       DateTime.parse(json['fecha_hora'] as String).toLocal(),
+      idHistorial:    json['id_historial'] as int,
+      idRecordatorio: json['id_recordatorio'] as int?,
+      tipo:           json['tipo'] as String,
+      nombre:         json['nombre'] as String,
+      horaProgramada: json['hora_programada'] as String?,
+      estado:         json['estado'] as String,
+      valorPresion:   json['valor_presion'] as String?,
+      nivelPresion:   json['nivel_presion'] as String?,
+      fechaHora:      DateTime.parse(json['fecha_hora'] as String).toLocal(),
+    );
+  }
+
+  factory HistorialItem.fromDb(Map<String, dynamic> row) {
+    return HistorialItem(
+      idHistorial:    row['id_local'] as int,
+      idRecordatorio: row['id_recordatorio'] as int?,
+      tipo:           row['tipo'] as String,
+      nombre:         row['nombre'] as String,
+      horaProgramada: row['hora_programada'] as String?,
+      estado:         row['estado'] as String,
+      valorPresion:   row['valor_presion'] as String?,
+      nivelPresion:   row['nivel_presion'] as String?,
+      fechaHora:      DateTime.parse(row['fecha_hora'] as String).toLocal(),
     );
   }
 }
 
-/// Llama a los endpoints del backend para registrar y consultar
-/// el historial de cumplimiento (medicamentos tomados, mediciones de presión).
 class HistorialService {
-  static const String _baseUrl = 'https://servidorappseremi-production.up.railway.app';
+  static const String _baseUrl =
+      'https://servidorappseremi-production.up.railway.app';
 
+  final DBHelper _db = DBHelper();
   final AuthService _authService = AuthService();
+  final ConnectivityService _connectivity = ConnectivityService();
 
-  /// Registra la confirmación de toma de un medicamento.
-  /// Fire-and-forget: si falla, solo se loguea y no rompe el flujo del paciente.
+  // ── Registrar medicamento tomado ──────────────────────────────
   Future<bool> registrarMedicamento({
     int? idRecordatorio,
     required String nombre,
     String? horaProgramada,
+    String estado = 'tomado',
   }) async {
-    try {
-      final token = await _authService.getToken();
-      if (token == null) return false;
+    final usuario = await _authService.getUsuario();
+    final rut = usuario?['rut'] as String?;
+    if (rut == null) return false;
+    final token = await _authService.getToken();
+    if (token == null) return false;
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/historial/medicamento'),
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'id_recordatorio': idRecordatorio,
-          'nombre':           nombre,
-          'hora_programada':  horaProgramada,
-        }),
-      ).timeout(const Duration(seconds: 10));
+    final ahora = DateTime.now().toIso8601String();
+    final payload = <String, dynamic>{
+      'id_recordatorio': idRecordatorio,
+      'nombre':          nombre,
+      'hora_programada': horaProgramada,
+      'estado':          estado,
+    };
 
-      return response.statusCode == 201;
-    } catch (e) {
-      print('❌ HistorialService.registrarMedicamento excepción: $e');
-      return false;
+    // Guardar en SQLite siempre (inmediato)
+    final idLocal = await _db.insertarHistorial({
+      'rut_usuario':     rut,
+      'id_recordatorio': idRecordatorio,
+      'tipo':            'medicamento',
+      'nombre':          nombre,
+      'hora_programada': horaProgramada,
+      'estado':          estado,
+      'fecha_hora':      ahora,
+      'sincronizado':    0,
+    });
+
+    final online = await _connectivity.hayInternet();
+    if (online) {
+      try {
+        final res = await http.post(
+          Uri.parse('$_baseUrl/api/historial/medicamento'),
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(payload),
+        ).timeout(const Duration(seconds: 10));
+
+        if (res.statusCode == 201) {
+          // Marcar como sincronizado
+          final db = await _db.database;
+          await db.update(
+            'historial_cumplimiento',
+            {'sincronizado': 1},
+            where: 'id_local = ?',
+            whereArgs: [idLocal],
+          );
+          return true;
+        }
+      } catch (_) {}
     }
+
+    // Encolar para sincronizar después
+    await _db.encolarOperacion(
+      operacion:  'crear_historial_medicamento',
+      payload:    payload,
+      idLocalRef: idLocal,
+    );
+    return true;
   }
 
-  /// Registra una medición de presión realizada. El nivel se calcula en el servidor.
+  // ── Registrar medición de presión ─────────────────────────────
   Future<bool> registrarMedicion({
     int? idRecordatorio,
     String nombre = 'Control de Presión',
     String? horaProgramada,
     required String valorPresion,
+    String estado = 'tomado',
   }) async {
-    try {
-      final token = await _authService.getToken();
-      if (token == null) return false;
+    final usuario = await _authService.getUsuario();
+    final rut = usuario?['rut'] as String?;
+    if (rut == null) return false;
+    final token = await _authService.getToken();
+    if (token == null) return false;
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/historial/medicion'),
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'id_recordatorio': idRecordatorio,
-          'nombre':           nombre,
-          'hora_programada':  horaProgramada,
-          'valor_presion':    valorPresion,
-        }),
-      ).timeout(const Duration(seconds: 10));
+    final ahora = DateTime.now().toIso8601String();
+    final payload = <String, dynamic>{
+      'id_recordatorio': idRecordatorio,
+      'nombre':          nombre,
+      'hora_programada': horaProgramada,
+      'valor_presion':   valorPresion,
+      'estado':          estado,
+    };
 
-      return response.statusCode == 201;
-    } catch (e) {
-      print('❌ HistorialService.registrarMedicion excepción: $e');
-      return false;
+    // Calcular nivel localmente (misma lógica que el backend)
+    final nivel = _calcularNivelPresion(valorPresion);
+
+    final idLocal = await _db.insertarHistorial({
+      'rut_usuario':     rut,
+      'id_recordatorio': idRecordatorio,
+      'tipo':            'medicion',
+      'nombre':          nombre,
+      'hora_programada': horaProgramada,
+      'estado':          estado,
+      'valor_presion':   valorPresion,
+      'nivel_presion':   nivel,
+      'fecha_hora':      ahora,
+      'sincronizado':    0,
+    });
+
+    final online = await _connectivity.hayInternet();
+    if (online) {
+      try {
+        final res = await http.post(
+          Uri.parse('$_baseUrl/api/historial/medicion'),
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(payload),
+        ).timeout(const Duration(seconds: 10));
+
+        if (res.statusCode == 201) {
+          final db = await _db.database;
+          await db.update(
+            'historial_cumplimiento',
+            {'sincronizado': 1},
+            where: 'id_local = ?',
+            whereArgs: [idLocal],
+          );
+          return true;
+        }
+      } catch (_) {}
     }
+
+    await _db.encolarOperacion(
+      operacion:  'crear_historial_medicion',
+      payload:    payload,
+      idLocalRef: idLocal,
+    );
+    return true;
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // NUEVO: registrarNoAtendido
-  // Se llama desde AlarmViewModel al minuto 30 sin respuesta,
-  // tanto para medicamentos como para mediciones de presión.
-  // ══════════════════════════════════════════════════════════════════
-
-  /// Registra que el usuario NO atendió la alarma en 30 minutos.
-  /// [tipo] debe ser 'medicamento' o 'medicion'.
+  // ── Registrar no atendido ─────────────────────────────────────
   Future<bool> registrarNoAtendido({
     int? idRecordatorio,
     required String tipo,
     required String nombre,
     String? horaProgramada,
   }) async {
-    try {
-      final token = await _authService.getToken();
-      if (token == null) return false;
-
-      // El endpoint de medicamento ya acepta estado='no_tomado'.
-      // Para medicion usamos el mismo endpoint pero sin valor_presion
-      // (el backend acepta omitirlo cuando estado=no_tomado).
-      final String endpoint = tipo == 'medicion'
-          ? '$_baseUrl/api/historial/medicion'
-          : '$_baseUrl/api/historial/medicamento';
-
-      final Map<String, dynamic> body = {
-        'id_recordatorio': idRecordatorio,
-        'nombre':           nombre,
-        'hora_programada':  horaProgramada,
-        'estado':           'no_tomado',
-      };
-
-      // Para medicion necesitamos enviar un valor_presion vacío o nulo;
-      // el backend lo ignora cuando estado=no_tomado.
-      if (tipo == 'medicion') {
-        body['valor_presion'] = null;
-      }
-
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 201) {
-        print('📋 HistorialService: registrado como no_atendido ($tipo: $nombre)');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('❌ HistorialService.registrarNoAtendido excepción: $e');
-      return false;
+    if (tipo == 'medicion') {
+      return await registrarMedicion(
+        idRecordatorio: idRecordatorio,
+        nombre:         nombre,
+        horaProgramada: horaProgramada,
+        valorPresion:   '',
+        estado:         'no_tomado',
+      );
+    } else {
+      return await registrarMedicamento(
+        idRecordatorio: idRecordatorio,
+        nombre:         nombre,
+        horaProgramada: horaProgramada,
+        estado:         'no_tomado',
+      );
     }
   }
 
-  /// Obtiene el historial del usuario autenticado.
-  /// [tipo] opcional: 'medicamento' o 'medicion' para filtrar.
+  // ── Obtener historial ─────────────────────────────────────────
   Future<List<HistorialItem>> obtenerHistorial({
     DateTime? desde,
     DateTime? hasta,
     String? tipo,
   }) async {
+    final usuario = await _authService.getUsuario();
+    final rut = usuario?['rut'] as String?;
+    if (rut == null) return [];
+
+    String? desdeStr, hastaStr;
+    if (desde != null) {
+      desdeStr =
+          '${desde.year}-${desde.month.toString().padLeft(2, '0')}-${desde.day.toString().padLeft(2, '0')}';
+    }
+    if (hasta != null) {
+      hastaStr =
+          '${hasta.year}-${hasta.month.toString().padLeft(2, '0')}-${hasta.day.toString().padLeft(2, '0')}';
+    }
+
+    final online = await _connectivity.hayInternet();
+
+    if (online) {
+      try {
+        final token = await _authService.getToken();
+        if (token == null) return [];
+
+        final params = <String, String>{};
+        if (desdeStr != null) params['desde'] = desdeStr;
+        if (hastaStr != null) params['hasta'] = hastaStr;
+        if (tipo != null)     params['tipo']  = tipo;
+
+        final uri = Uri.parse('$_baseUrl/api/historial')
+            .replace(queryParameters: params);
+
+        final res = await http.get(
+          uri,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type':  'application/json',
+          },
+        ).timeout(const Duration(seconds: 10));
+
+        if (res.statusCode == 200) {
+          final data  = jsonDecode(res.body) as Map<String, dynamic>;
+          final lista = (data['historial'] as List<dynamic>? ?? []);
+          return lista
+              .map((e) => HistorialItem.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      } catch (_) {}
+    }
+
+    // Fallback: leer de SQLite local
+    final rows = await _db.getHistorial(
+      rut,
+      desde: desdeStr,
+      hasta: hastaStr,
+      tipo:  tipo,
+    );
+    return rows.map((r) => HistorialItem.fromDb(r)).toList();
+  }
+
+  // ── Calcular nivel de presión localmente ──────────────────────
+  // Misma lógica que el backend para consistencia offline
+  String? _calcularNivelPresion(String valor) {
+    if (valor.isEmpty) return null;
     try {
-      final token = await _authService.getToken();
-      if (token == null) return [];
+      final partes    = valor.split('/');
+      final sistolica = int.parse(partes[0].trim());
+      final diastolica = int.parse(partes[1].trim());
 
-      String fmt(DateTime d) =>
-          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-      final params = <String, String>{};
-      if (desde != null) params['desde'] = fmt(desde);
-      if (hasta != null) params['hasta'] = fmt(hasta);
-      if (tipo != null)  params['tipo']  = tipo;
-
-      final uri = Uri.parse('$_baseUrl/api/historial').replace(queryParameters: params);
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type':  'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final lista = (data['historial'] as List<dynamic>? ?? []);
-        return lista
-            .map((e) => HistorialItem.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
-    } catch (e) {
-      print('❌ HistorialService.obtenerHistorial excepción: $e');
-      return [];
+      if (sistolica >= 180 || diastolica >= 120) return 'critico';
+      if (sistolica >= 140 || diastolica >= 90)  return 'elevado';
+      return 'normal';
+    } catch (_) {
+      return null;
     }
   }
 }
