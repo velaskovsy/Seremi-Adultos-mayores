@@ -131,12 +131,14 @@ class SyncService {
         ).timeout(const Duration(seconds: 10));
 
         if (res.statusCode == 201 && idLocalRef != null) {
-          final data = jsonDecode(res.body);
-          // El backend devuelve los ids creados
-          final ids = data['ids'] as List<dynamic>?;
-          if (ids != null && ids.isNotEmpty) {
-            await _db.marcarRecordatorioSincronizado(
-                idLocalRef, ids.first as int);
+          final data = jsonDecode(res.body) as Map<String, dynamic>;
+          // El servidor devuelve { recordatorios: [...] } con campo id_recordatorio
+          final lista = data['recordatorios'] as List<dynamic>?;
+          if (lista != null && lista.isNotEmpty) {
+            final idRailway = (lista.first as Map<String, dynamic>)['id_recordatorio'] as int?;
+            if (idRailway != null) {
+              await _db.marcarRecordatorioSincronizado(idLocalRef, idRailway);
+            }
           }
         }
         return res.statusCode == 201;
@@ -148,11 +150,14 @@ class SyncService {
           body: jsonEncode(payload),
         ).timeout(const Duration(seconds: 10));
         if (res.statusCode == 201 && idLocalRef != null) {
-          final data = jsonDecode(res.body);
-          final ids = data['ids'] as List<dynamic>?;
-          if (ids != null && ids.isNotEmpty) {
-            await _db.marcarRecordatorioSincronizado(
-                idLocalRef, ids.first as int);
+          final data = jsonDecode(res.body) as Map<String, dynamic>;
+          // El servidor devuelve { recordatorios: [...] } con campo id_recordatorio
+          final lista = data['recordatorios'] as List<dynamic>?;
+          if (lista != null && lista.isNotEmpty) {
+            final idRailway = (lista.first as Map<String, dynamic>)['id_recordatorio'] as int?;
+            if (idRailway != null) {
+              await _db.marcarRecordatorioSincronizado(idLocalRef, idRailway);
+            }
           }
         }
         return res.statusCode == 201;
@@ -164,11 +169,14 @@ class SyncService {
           body: jsonEncode(payload),
         ).timeout(const Duration(seconds: 10));
         if (res.statusCode == 201 && idLocalRef != null) {
-          final data = jsonDecode(res.body);
-          final ids = data['ids'] as List<dynamic>?;
-          if (ids != null && ids.isNotEmpty) {
-            await _db.marcarRecordatorioSincronizado(
-                idLocalRef, ids.first as int);
+          final data = jsonDecode(res.body) as Map<String, dynamic>;
+          // El servidor devuelve { recordatorios: [...] } con campo id_recordatorio
+          final lista = data['recordatorios'] as List<dynamic>?;
+          if (lista != null && lista.isNotEmpty) {
+            final idRailway = (lista.first as Map<String, dynamic>)['id_recordatorio'] as int?;
+            if (idRailway != null) {
+              await _db.marcarRecordatorioSincronizado(idLocalRef, idRailway);
+            }
           }
         }
         return res.statusCode == 201;
@@ -180,11 +188,12 @@ class SyncService {
           body: jsonEncode(payload),
         ).timeout(const Duration(seconds: 10));
         if (res.statusCode == 201 && idLocalRef != null) {
-          final data = jsonDecode(res.body);
-          final ids = data['ids'] as List<dynamic>?;
-          if (ids != null && ids.isNotEmpty) {
-            await _db.marcarRecordatorioSincronizado(
-                idLocalRef, ids.first as int);
+          final data = jsonDecode(res.body) as Map<String, dynamic>;
+          // El servidor devuelve { recordatorio: {...} } singular con campo id_recordatorio
+          final rec = data['recordatorio'] as Map<String, dynamic>?;
+          final idRailway = rec?['id_recordatorio'] as int?;
+          if (idRailway != null) {
+            await _db.marcarRecordatorioSincronizado(idLocalRef, idRailway);
           }
         }
         return res.statusCode == 201;
