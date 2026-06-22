@@ -80,23 +80,6 @@ class LoginScreen extends StatelessWidget {
               hintFontSize: 40,
             ),
 
-            const SizedBox(height: 10),
-
-            // Opción de ¿OLVIDÓ SU CLAVE?
-            TextButton(
-              onPressed: () {
-                // TODO: navegar a pantalla de recuperación
-              },
-              child: const Text(
-                '¿OLVIDÓ SU CLAVE?',
-                style: TextStyle(
-                  decoration: TextDecoration.underline,
-                  color: Colors.black,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-
             const SizedBox(height: 30),
 
             // Botón ENTRAR
