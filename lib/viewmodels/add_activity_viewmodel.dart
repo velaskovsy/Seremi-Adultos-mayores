@@ -157,7 +157,7 @@ class AddActivityViewModel extends ChangeNotifier {
           final detalle = _cantidadPorHora.containsKey(i)
               ? '${_cantidadPorHora[i]} vaso(s)'
               : '';
-          final int alarmId = (_tipoActividad + horaStr).hashCode.abs() % 100000;
+          final int alarmId = (_tipoActividad + horaStr).hashCode.abs() % 100000 + 500000;
           await AlarmSchedulerService().programarAlarma(
             id: alarmId,
             hora: horaStr,

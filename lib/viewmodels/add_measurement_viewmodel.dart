@@ -224,7 +224,7 @@ class AddMeasurementViewModel extends ChangeNotifier {
     if (todosExitosos) {
       try {
         for (final horaStr in horasFormateadas) {
-          final int alarmId = (_tipoMedicion + horaStr).hashCode.abs() % 100000;
+          final int alarmId = (_tipoMedicion + horaStr).hashCode.abs() % 100000 + 500000;
           await AlarmSchedulerService().programarAlarma(
             id: alarmId,
             hora: horaStr,

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../main.dart';
 import '../viewmodels/alarma_presion_viewmodel.dart' hide AlarmaMedicionScreen;
@@ -20,7 +21,14 @@ class NotificationService {
 
   Future<void> initNotification() async {
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('America/Santiago'));
+    // Detectar zona horaria real del dispositivo en vez de hardcodear Santiago
+    try {
+      final String zonaLocal = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(zonaLocal));
+    } catch (_) {
+      // Fallback: si falla la detección, usar Santiago
+      tz.setLocalLocation(tz.getLocation('America/Santiago'));
+    }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');

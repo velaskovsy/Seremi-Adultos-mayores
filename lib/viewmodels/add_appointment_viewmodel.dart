@@ -132,7 +132,7 @@ class AddAppointmentViewModel extends ChangeNotifier {
     // ─── NUEVO: Programar notificación del SO para la cita médica ─────────────
     if (exito && _fecha != null) {
       try {
-        final int alarmId = (_profesional + horaTexto).hashCode.abs() % 100000;
+        final int alarmId = (_profesional + horaTexto).hashCode.abs() % 100000 + 500000;
         await AlarmSchedulerService().programarAlarma(
           id: alarmId,
           hora: horaTexto,

@@ -89,7 +89,8 @@ Future<void> _rescatarAlarmasTrasReinicio() async {
     final hoy = _soloFecha(DateTime.now());
     final alarmasPendientes = alarmas.where((a) {
       final id = a['id']?.toString() ?? '';
-      final llaveUnica = "${a['tipo']}_$id";
+      final String tipo = a['tipo'] as String? ?? '';
+      final String llaveUnica = (tipo == 'medicamento') ? 'med_$id' : 'presion_$id';
       return !(prefs.getBool("${llaveUnica}_$hoy") ?? false);
     }).toList();
 
@@ -125,7 +126,9 @@ Future<void> _vigilarAlarmasNoAtendidas() async {
       if (tipo != 'medicamento' && tipo != 'medicion') continue;
 
       final int id = (r['id_railway'] ?? r['id_local']) as int;
-      final String llaveUnica = "${tipo}_$id";
+      // ⚠️ IMPORTANTE: usar el mismo prefijo que AlarmViewModel para que las llaves coincidan
+      // AlarmViewModel usa "med_$id" para medicamentos y "presion_$id" para mediciones
+      final String llaveUnica = (tipo == 'medicamento') ? 'med_$id' : 'presion_$id';
       final String hora = r['hora_inicio'] as String? ?? '';
       if (hora.isEmpty) continue;
 
@@ -145,7 +148,7 @@ Future<void> _vigilarAlarmasNoAtendidas() async {
 
       // Si pasaron 30 minutos sin atender → notificar al cuidador (solo una vez)
       if (difMinutos >= 30) {
-        final String llaveCuidador = "${llaveUnica}_cuidador_$hoy";
+        final String llaveCuidador = "${llaveUnica}_cuidador_notificado_$hoy";
         final yaNotificado = prefs.getBool(llaveCuidador) ?? false;
         if (!yaNotificado) {
           await prefs.setBool(llaveCuidador, true);
@@ -162,7 +165,7 @@ Future<void> _vigilarAlarmasNoAtendidas() async {
           }
 
           // Registrar en historial como "no_atendido"
-          final String llaveHistorial = "${llaveUnica}_historial_$hoy";
+          final String llaveHistorial = "${llaveUnica}_no_atendido_$hoy";
           final yaRegistrado = prefs.getBool(llaveHistorial) ?? false;
           if (!yaRegistrado) {
             await prefs.setBool(llaveHistorial, true);

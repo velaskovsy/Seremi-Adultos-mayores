@@ -302,7 +302,7 @@ class AddMedicationViewModel extends ChangeNotifier {
         final horaStr = '$h:$m';
 
         // ID único y estable para este medicamento (basado en nombre+hora)
-        final int alarmId = (_nombre + horaStr).hashCode.abs() % 100000;
+        final int alarmId = (_nombre + horaStr).hashCode.abs() % 100000 + 500000;
 
         await AlarmSchedulerService().programarAlarma(
           id: alarmId,
