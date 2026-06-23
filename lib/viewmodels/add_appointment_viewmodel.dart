@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/cita_medica_service.dart';
+import '../services/alarm_scheduler_service.dart';
 
 
 class AddAppointmentViewModel extends ChangeNotifier {
@@ -127,6 +128,25 @@ class AddAppointmentViewModel extends ChangeNotifier {
       _errorGuardar = 'No se pudo guardar. Verifica tu conexión.';
     }
     notifyListeners();
+
+    // ─── NUEVO: Programar notificación del SO para la cita médica ─────────────
+    if (exito && _fecha != null) {
+      try {
+        final int alarmId = (_profesional + horaTexto).hashCode.abs() % 100000;
+        await AlarmSchedulerService().programarAlarma(
+          id: alarmId,
+          hora: horaTexto,
+          tipo: 'cita',
+          nombre: _profesional.isNotEmpty ? _profesional : _lugar,
+          detalle: _lugar,
+          repetirDiariamente: false, // Las citas son de una sola vez
+        );
+        print('✅ Alarma del SO programada para cita: $_profesional a las $horaTexto');
+      } catch (e) {
+        print('⚠️ No se pudo programar alarma del SO para cita: $e');
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
 
     return exito;
   }

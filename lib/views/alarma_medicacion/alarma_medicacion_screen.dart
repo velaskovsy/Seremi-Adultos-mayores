@@ -51,8 +51,9 @@ class _AlarmScreenState extends State<AlarmScreen> {
       print("🛡️ Candado protegido. El control pasa a la pantalla de instrucciones.");
     }
 
-    // Apagamos el ruido de Android
-    NotificationService().apagarAlarmas();
+    // Apagamos SOLO esta alarma (no las del resto del día)
+    final int id = widget.medicamento['id'] ?? 0;
+    NotificationService().apagarAlarma(id);
 
     super.dispose();
   }

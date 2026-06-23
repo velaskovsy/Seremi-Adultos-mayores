@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/medicion_service.dart';
 import '../services/storage_service.dart';
+import '../services/alarm_scheduler_service.dart';
 
 class AddMeasurementViewModel extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
@@ -218,6 +219,26 @@ class AddMeasurementViewModel extends ChangeNotifier {
       _errorGuardar = 'Algunos recordatorios no se pudieron guardar. Verifica tu conexión e intenta de nuevo.';
     }
     notifyListeners();
+
+    // ─── NUEVO: Programar alarmas del SO para cada hora de medición ────────────
+    if (todosExitosos) {
+      try {
+        for (final horaStr in horasFormateadas) {
+          final int alarmId = (_tipoMedicion + horaStr).hashCode.abs() % 100000;
+          await AlarmSchedulerService().programarAlarma(
+            id: alarmId,
+            hora: horaStr,
+            tipo: 'medicion',
+            nombre: _tipoMedicion,
+            repetirDiariamente: true,
+          );
+          print('✅ Alarma del SO programada para medición: $_tipoMedicion a las $horaStr');
+        }
+      } catch (e) {
+        print('⚠️ No se pudo programar alarma del SO para medición: $e');
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
 
     return todosExitosos;
   }

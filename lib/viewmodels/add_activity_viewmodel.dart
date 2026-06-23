@@ -1,6 +1,7 @@
 // lib/viewmodels/add_activity_viewmodel.dart
 import 'package:flutter/material.dart';
 import '../services/activity_service.dart';
+import '../services/alarm_scheduler_service.dart';
 
 class AddActivityViewModel extends ChangeNotifier {
 
@@ -147,6 +148,31 @@ class AddActivityViewModel extends ChangeNotifier {
 
     _guardando = false;
     notifyListeners();
+
+    // ─── NUEVO: Programar notificaciones del SO para cada hora de actividad ───
+    if (exito) {
+      try {
+        for (int i = 0; i < _horas.length; i++) {
+          final horaStr = horaTexto(_horas[i]);
+          final detalle = _cantidadPorHora.containsKey(i)
+              ? '${_cantidadPorHora[i]} vaso(s)'
+              : '';
+          final int alarmId = (_tipoActividad + horaStr).hashCode.abs() % 100000;
+          await AlarmSchedulerService().programarAlarma(
+            id: alarmId,
+            hora: horaStr,
+            tipo: 'actividad',
+            nombre: _tipoActividad,
+            detalle: detalle.isNotEmpty ? detalle : null,
+            repetirDiariamente: true,
+          );
+        }
+        print('✅ Alarmas del SO programadas para actividad: $_tipoActividad');
+      } catch (e) {
+        print('⚠️ No se pudo programar alarma del SO para actividad: $e');
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
 
     return exito;
   }

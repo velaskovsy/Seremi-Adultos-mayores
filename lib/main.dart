@@ -15,6 +15,8 @@ import 'viewmodels/add_medication_viewmodel.dart';
 import 'views/login/login_screen.dart';
 import 'package:flutter/services.dart';
 import 'services/notificacion_service.dart';
+import 'services/alarm_scheduler_service.dart';
+import 'services/background_worker.dart';
 import 'services/sync_service.dart';
 import 'database/db_helper.dart';
 import 'views/alarma_medicacion/alarma_medicacion_screen.dart';
@@ -36,6 +38,14 @@ void main() async {
 
   // Inicializar el canal nativo de notificaciones
   await NotificationService().initNotification();
+
+  // ─── NUEVO: Inicializar el programador de alarmas del SO ───────────────────
+  await AlarmSchedulerService().init();
+
+  // ─── NUEVO: Inicializar WorkManager (vigilante en segundo plano) ───────────
+  await BackgroundWorker.inicializar();
+  await BackgroundWorker.registrarTareaPeriodica();
+  // ──────────────────────────────────────────────────────────────────────────
 
   // Verificar si el sistema operativo abrió la app por una Alarma Intrusiva
   final notificationDetails = await FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails();

@@ -179,8 +179,22 @@ class NotificationService {
     );
   }
 
+  /// Apaga SOLO la notificación activa de la alarma actual (por su id).
+  /// NO cancela las alarmas programadas futuras del resto del día.
+  Future<void> apagarAlarma(int id) async {
+    await _notificationsPlugin.cancel(id);
+  }
+
+  /// Apaga TODAS las notificaciones visibles (usar solo en casos excepcionales).
+  /// ⚠️ ADVERTENCIA: no cancela las alarmas futuras programadas con zonedSchedule.
+  Future<void> apagarTodasLasNotificacionesVisibles() async {
+    await _notificationsPlugin.cancelAll();
+  }
+
+  /// @deprecated Usar apagarAlarma(id) para no cancelar alarmas futuras
   Future<void> apagarAlarmas() async {
-    // Destruye todas las notificaciones activas para cortar el sonido/vibración
+    // Mantener compatibilidad: solo cancela notificaciones visibles actuales
+    // Las alarmas futuras programadas con zonedSchedule NO se ven afectadas
     await _notificationsPlugin.cancelAll();
   }
 

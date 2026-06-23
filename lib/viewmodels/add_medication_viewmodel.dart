@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../services/medicamento_service.dart';
 import '../services/storage_service.dart';
+import '../services/alarm_scheduler_service.dart';
 
 class AddMedicationViewModel extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
@@ -290,6 +291,33 @@ class AddMedicationViewModel extends ChangeNotifier {
       _errorGuardar = 'Algunos recordatorios no se pudieron guardar de forma completa.';
     }
     notifyListeners();
+
+    // ─── NUEVO: Programar alarma con el SO para que funcione sin la app ────────
+    // Usamos un ID estable basado en hora+nombre para este grupo de medicamento.
+    // El SO se encargará de disparar la alarma aunque el teléfono esté reiniciado.
+    if (todosExitosos) {
+      try {
+        final h = _hora.hour.toString().padLeft(2, '0');
+        final m = _hora.minute.toString().padLeft(2, '0');
+        final horaStr = '$h:$m';
+
+        // ID único y estable para este medicamento (basado en nombre+hora)
+        final int alarmId = (_nombre + horaStr).hashCode.abs() % 100000;
+
+        await AlarmSchedulerService().programarAlarma(
+          id: alarmId,
+          hora: horaStr,
+          tipo: 'medicamento',
+          nombre: _nombre,
+          dosis: _dosis,
+          repetirDiariamente: true,
+        );
+        print('✅ Alarma del SO programada para medicamento: $_nombre a las $horaStr');
+      } catch (e) {
+        print('⚠️ No se pudo programar alarma del SO: $e');
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
 
     return todosExitosos;
   }
