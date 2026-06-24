@@ -4,7 +4,7 @@ Salud Mayor es una aplicación móvil desarrollada con Flutter, diseñada para a
 
 ## Caracteristicas
 
-*   **Offline-First Arquitectura**: La aplicación es completamente funcional sin conexión. Todos los datos se guardan en una base de datos SQLite local y se sincronizan con el servidor backend mediante un sistema de colas cuando vuelve a haber conexión a Internet disponible.
+*   **Almacenamiento local**: La aplicación es completamente funcional sin conexión. Todos los datos se guardan en una base de datos SQLite local y se sincronizan con el servidor backend mediante un sistema de colas cuando vuelve a haber conexión a Internet disponible.
 *   **Gestión de recordatorios**: Los usuarios pueden crear, editar y eliminar recordatorios para:
     *   **Medicamentos**: Configurar recordatorios para múltiples dosis diarias, incluyendo la dosis específica, instrucciones y fotos de referencia del medicamento y su empaque.
     *   **Medición de presión**: Programar chequeos regulares, enfocados principalmente en la presión arterial.
@@ -57,7 +57,7 @@ Para ejecutar este proyecto localmente, sigue estos pasos:
     flutter pub get
 ```
 
-3. **Run the application:**
+3. **Ejecutar la aplicación:**
 ```bash
     flutter run
 ```
