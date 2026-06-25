@@ -54,7 +54,22 @@ class AddMedicationStep2Screen extends StatelessWidget {
       },
     );
     if (seleccionada != null) {
-      vm.setHora(seleccionada);
+      vm.setHora(seleccionada); // ← la View no sabe nada de la regla
+      if (vm.errorHora != null) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Horario no permitido', style: TextStyle(fontSize: 32),),
+            content: Text(vm.errorHora!,  style: TextStyle(fontSize: 26),),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido', style: TextStyle(fontSize: 32),),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 

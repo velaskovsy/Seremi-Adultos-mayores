@@ -15,6 +15,8 @@ class AddMedicationViewModel extends ChangeNotifier {
   String _dosis = '';
   String? _errorNombre;
   String? _errorDosis;
+  String? _errorHora;
+  String? get errorHora => _errorHora;
 
   // Paso 2: fecha y hora
   DateTime? _fecha;
@@ -45,8 +47,7 @@ class AddMedicationViewModel extends ChangeNotifier {
   // Edición: si no es null, guardar() actualiza este grupo en vez de crear uno nuevo
   String? _grupoIdEditando;
 
-  // ─── Getters ──────────────────────────────────────────────
-
+  // Getters
   String get nombre => _nombre;
   String get dosis => _dosis;
   String? get errorNombre => _errorNombre;
@@ -81,7 +82,7 @@ class AddMedicationViewModel extends ChangeNotifier {
     return '$h:$m';
   }
 
-  // ─── Setters paso 1 ───────────────────────────────────────
+  // Setters paso 1
 
   void setNombre(String value) {
     _nombre = value;
@@ -95,7 +96,7 @@ class AddMedicationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ─── Setters paso 2 ───────────────────────────────────────
+  // Setters paso 2
 
   void setFecha(DateTime fecha) {
     _fecha = fecha;
@@ -103,18 +104,24 @@ class AddMedicationViewModel extends ChangeNotifier {
   }
 
   void setHora(TimeOfDay hora) {
+    if (hora.hour < 6 || hora.hour >= 23) {
+      _errorHora = 'Solo puedes programar entre las 6:00 y las 23:00 hrs';
+      notifyListeners();
+      return;
+    }
+    _errorHora = null;
     _hora = hora;
     notifyListeners();
   }
 
-  // ─── Setters paso 3 ───────────────────────────────────────
+  // Setters paso 3
 
   void setIntervalo(String value) {
     _intervalo = value;
     notifyListeners();
   }
 
-  // ─── Setters paso 4 ───────────────────────────────────────
+  // Setters paso 4
 
   void setInstrucciones(String value) {
     _instrucciones = value;
@@ -150,7 +157,7 @@ class AddMedicationViewModel extends ChangeNotifier {
     }
   }
 
-  // ─── Precarga de datos para editar un grupo existente ─────
+  // Precarga de datos para editar un grupo existente
 
   void cargarParaEditar({
     required String grupoId,
@@ -177,7 +184,9 @@ class AddMedicationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ─── Validación paso 1 ────────────────────────────────────
+
+
+  // Validación paso 1
 
   bool validarPaso1() {
     bool valido = true;
@@ -193,7 +202,7 @@ class AddMedicationViewModel extends ChangeNotifier {
     return valido;
   }
 
-  // ─── Guardar: sube fotos a Supabase y guarda en Railway ───
+  // Guardar: sube fotos a Supabase y guarda en Railway
   // Si _grupoIdEditando no es null, reemplaza ese grupo (editar);
   // si es null, crea un grupo nuevo (alta normal).
 
