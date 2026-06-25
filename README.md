@@ -1,63 +1,107 @@
 # Seremi Adultos Mayores
 
-Salud Mayor es una aplicación móvil desarrollada con Flutter, diseñada para ayudar a los usuarios de edad avanzada a administrar sus rutinas de salud diarias. La aplicación proporciona un sistema sólido para programar y rastrear la ingesta de medicamentos, mediciones de salud, citas médicas y actividades físicas. Cuenta con una arquitectura offline-first (prioridad sin conexión), que garantiza una funcionalidad completa sin una conexión constante a Internet, e incluye integración del cuidador para un mejor monitoreo y soporte.
+App móvil desarrollada en Flutter para ayudar a adultos mayores a gestionar su rutina de salud diaria. Permite registrar y hacer seguimiento de medicamentos, mediciones de presión, citas médicas y actividades físicas.
 
-## Caracteristicas
+Funciona con arquitectura **offline-first**: todos los datos se guardan en SQLite local y se sincronizan con el servidor cuando hay conexión disponible.
 
-*   **Almacenamiento local**: La aplicación es completamente funcional sin conexión. Todos los datos se guardan en una base de datos SQLite local y se sincronizan con el servidor backend mediante un sistema de colas cuando vuelve a haber conexión a Internet disponible.
-*   **Gestión de recordatorios**: Los usuarios pueden crear, editar y eliminar recordatorios para:
-    *   **Medicamentos**: Configurar recordatorios para múltiples dosis diarias, incluyendo la dosis específica, instrucciones y fotos de referencia del medicamento y su empaque.
-    *   **Medición de presión**: Programar chequeos regulares, enfocados principalmente en la presión arterial.
-    *   **Actividades**: Recordatorios para actividades físicas como la hidratación.
-    *   **Citas medicas**: Hacer un seguimiento de las próximas citas con profesionales de la salud.
-*   **Alarmas intrusivas**: Los recordatorios críticos (medicamentos y presión arterial) activan alarmas sonoras a pantalla completa que no se pueden descartar fácilmente, garantizando que sean atendidos. Las alarmas aumentan de intensidad si son ignoradas.
-*   **Integración del cuidador**: El sistema notifica automáticamente a un cuidador designado a través de WhatsApp en situaciones críticas, tales como:
-    *   Un medicamento o una medición de presión arterial olvidados.
-    *   Lecturas de presión arterial persistentemente altas.
-    *   Cuando el usuario activa manualmente una alerta de emergencia.
-*   **Semaforización en medición de presión**: Las lecturas de presión arterial se categorizan como `normal`, `elevado` o `critico`. La aplicación proporciona una respuesta visual inmediata y guía al usuario sobre los siguientes pasos a seguir, incluyendo la programación de una medición de seguimiento o el contacto con un cuidador/servicios de emergencia.
-*   **Recordatorios diarios y calendario**:
-    *   La pantalla de inicio ofrece un resumen claro de las tareas del día, organizadas en secciones de "Mañana", "Tarde" y "Noche".
-    *   Una vista completa de calendario permite a los usuarios ver y gestionar eventos para cualquier día determinado.
-*   **Historial de recordatios**: Un registro de historial detallado guarda el cumplimiento del usuario, mostrando qué recordatorios fueron completados, omitidos o registrados.
-*   **Asistente de voz**: La funcionalidad de Texto a Voz (TTS) lee los recordatorios e instrucciones en voz alta para mejorar la accesibilidad de los usuarios con discapacidades visuales.
+## Stack
 
-## Stack tecnologico & Arquitectura
+- **Framework:** Flutter (Dart)
+- **Patrón de arquitectura:** MVVM con Provider
+- **Base de datos local:** SQLite (`sqflite`)
+- **Backend:** API REST en Railway → [ServidorAPPSEREMI](https://github.com/Dmarcan/ServidorAPPSEREMI.git)
+- **Almacenamiento de imágenes:** Supabase Storage (fotos de medicamentos)
+- **Notificaciones:** `flutter_local_notifications` + alarmas intrusivas con `alarm`
+- **Voz:** `flutter_tts` para leer instrucciones en voz alta
 
-Esta aplicación está construida utilizando el framework **Flutter** y sigue el patrón MVVM (Model-View-ViewModel) para la gestión del estado utilizando el paquete **Provider**.
+## Funcionalidades principales
 
-*   **Base de datos local**: Se utiliza **SQLite** (`sqflite`) para el almacenamiento local de datos, lo que permite la funcionalidad offline-first.
-*   **Backend & sincronización**:
-    *   Un servicio backend personalizado alojado en **Railway** maneja la lógica de negocio, incluyendo el envío de notificaciones de WhatsApp a los cuidadores.
-    *   Se utiliza **Supabase** (PostgreSQL) para la autenticación de usuarios y como la base de datos principal en la nube.
-    *   Se utiliza **Supabase Storage** para alojar las imágenes subidas por el usuario (por ejemplo, fotos de medicamentos).
-    *   Un `SyncService` personalizado gestiona el flujo bidireccional de datos entre la base de datos SQLite local y los servicios backend. Utiliza una cola para procesar las operaciones pendientes una vez que se restablece la conectividad.
-*   **Librerias y dependencias**:
-    *   `provider`: Para la gestión del estado.
-    *   `supabase_flutter`: Para la autenticación y la interacción con la base de datos.
-    *   `sqflite` y `path`: Para la gestión de la base de datos local.
-    *   `http`: Para la comunicación con el backend en Railway.
-    *   `flutter_local_notifications` y `permission_handler`: Para programar y gestionar las alarmas y notificaciones locales.
-    *   `flutter_tts`: Para la funcionalidad de Texto a Voz.
-    *   `table_calendar`: Para la vista de calendario.
-    *   `image_picker`: Para seleccionar fotos desde la cámara o la galería.
+- Recordatorios para medicamentos, mediciones de presión, actividades y citas médicas
+- Alarmas a pantalla completa para recordatorios críticos (medicamentos y presión)
+- Semaforización de presión arterial: clasifica cada medición como `normal`, `elevado` o `crítico` y guía al usuario en los pasos a seguir
+- Notificaciones WhatsApp al cuidador ante medicamentos olvidados, presión alta persistente o botón de emergencia
+- Vista de inicio con tareas del día divididas en mañana / tarde / noche
+- Calendario mensual con marcadores de días con eventos
+- Historial de cumplimiento con estado de cada recordatorio (tomado / no tomado)
+- Login offline: valida el PIN localmente si no hay internet
 
-## Pasos de instalación
+## Estructura del proyecto
 
-Para ejecutar este proyecto localmente, sigue estos pasos:
-
-1. **Clonar el repositorio:**
-```bash
-    git clone [https://github.com/velaskovsy/seremi-adultos-mayores.git](https://github.com/velaskovsy/seremi-adultos-mayores.git)
-    cd seremi-adultos-mayores
+```
+lib/
+├── main.dart                  # Inicialización de Supabase, SQLite, notificaciones y sincronización
+├── models/                    # Modelos de datos (Recordatorio, Usuario)
+├── database/
+│   └── db_helper.dart         # SQLite local: tablas, cola de sincronización, sesión offline
+├── services/
+│   ├── auth_service.dart      # Login/registro contra Railway; fallback offline con hash SHA-256
+│   ├── storage_service.dart   # Subida de fotos a Supabase Storage
+│   ├── sync_service.dart      # Sincronización bidireccional SQLite ↔ Railway
+│   ├── recordatorio_service.dart
+│   ├── medicamento_service.dart
+│   ├── medicion_service.dart
+│   ├── activity_service.dart
+│   ├── cita_medica_service.dart
+│   ├── historial_service.dart
+│   ├── notificacion_service.dart
+│   ├── notificacion_cuidador_service.dart
+│   ├── connectivity_service.dart
+│   └── voice_service.dart
+├── viewmodels/                # Lógica de presentación (MVVM), uno por pantalla
+└── views/                     # Pantallas organizadas por funcionalidad
+    ├── home/
+    ├── login/ y register/
+    ├── add medication/
+    ├── add measurement/
+    ├── add activity/
+    ├── add appointment/
+    ├── alarma_medicacion/
+    ├── alarma_presion/
+    ├── calendario/
+    ├── historial/
+    ├── semaforizacion/
+    └── editar o eliminar recordatorio/
 ```
 
-2. **Instalar dependencias:**
-```bash
-    flutter pub get
+## Cómo corre el offline-first
+
+1. Cada operación (crear, editar, eliminar) se guarda primero en SQLite local
+2. Si hay internet se ejecuta directo contra Railway; si no, se encola en `cola_sincronizacion`
+3. `SyncService` escucha cambios de conectividad y procesa la cola cuando vuelve el internet
+4. Al recuperar conexión también baja los cambios desde Railway (pull) para mantener ambas BDs sincronizadas
+
+## Configuración
+
+### Supabase Storage (fotos de medicamentos)
+
+Las credenciales ya están en `main.dart`. Para un entorno propio, reemplazar en `main.dart`:
+
+```dart
+await Supabase.initialize(
+  url: 'TU_SUPABASE_URL',
+  anonKey: 'TU_SUPABASE_ANON_KEY',
+);
 ```
 
-3. **Ejecutar la aplicación:**
-```bash
-    flutter run
+Y crear un bucket llamado `fotos-recordatorios` con acceso público en el panel de Supabase.
+
+### Backend (Railway)
+
+La URL del servidor está definida en `auth_service.dart` y `sync_service.dart`:
+
+```dart
+static const String _baseUrl = 'https://servidorappseremi-production.up.railway.app';
 ```
+
+El repositorio del backend está en: https://github.com/Dmarcan/ServidorAPPSEREMI.git
+
+## Instalación y ejecución local
+
+```bash
+git clone <url-de-este-repo>
+cd seremi-adultos-mayores
+flutter pub get
+flutter run
+```
+
+Requiere Flutter SDK ≥ 3.11 y un dispositivo/emulador Android (iOS también funciona pero las alarmas intrusivas están optimizadas para Android).
