@@ -121,7 +121,7 @@ class AddActivityViewModel extends ChangeNotifier {
     return true;
   }
 
-  // ── Guardar: conectado a Railway ─────────────────────────
+// ── Guardar: conectado a Railway ─────────────────────────
   Future<bool> guardar() async {
     _guardando = true;
     notifyListeners();
@@ -133,9 +133,12 @@ class AddActivityViewModel extends ChangeNotifier {
     for (int i = 0; i < _horas.length; i++) {
       final horaStr = horaTexto(_horas[i]);
       horasFormateadas.add(horaStr);
-      if (_cantidadPorHora.containsKey(i)) {
-        cantidadMapeada[horaStr] = _cantidadPorHora[i]!;
-      }
+
+      // 👇 LA CORRECCIÓN 👇
+      // Si el usuario no tocó nada (no existe en el mapa), obligamos a que se
+      // guarde el valor por defecto que estaba viendo en la pantalla.
+      final String cantidadSeleccionada = _cantidadPorHora[i] ?? '1 vaso';
+      cantidadMapeada[horaStr] = cantidadSeleccionada;
     }
 
     final exito = await ActivityService().crearActividad(

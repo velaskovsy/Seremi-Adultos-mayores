@@ -146,10 +146,9 @@ class _DetalleActividadScreenState extends State<DetalleActividadScreen> {
                       child: Column(
                         children: [
                           _buildDetalleFila('Hora del\nrecordatorio', hora),
-                          if (detalle.isNotEmpty) ...[
-                            const Divider(color: colorGrisBorde, thickness: 2, height: 0),
-                            _buildDetalleFila('Cantidad', detalle),
-                          ],
+                          // 👇 EL IF DESAPARECE. EL CUADRO SIEMPRE ESTÁ 👇
+                          const Divider(color: colorGrisBorde, thickness: 2, height: 0),
+                          _buildDetalleFila('Cantidad', detalle.isNotEmpty ? detalle : '--'),
                         ],
                       ),
                     ),
@@ -161,21 +160,21 @@ class _DetalleActividadScreenState extends State<DetalleActividadScreen> {
                       onPressed: id == null
                           ? null
                           : () async {
-                              final editado = await Navigator.push<bool>(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => EditarActividadScreen(
-                                    id: id,
-                                    nombre: nombre,
-                                    hora: hora,
-                                    detalle: detalle.isNotEmpty ? detalle : null,
-                                  ),
-                                ),
-                              );
-                              if (editado == true && context.mounted) {
-                                Navigator.pop(context, true);
-                              }
-                            },
+                        final editado = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditarActividadScreen(
+                              id: id,
+                              nombre: nombre,
+                              hora: hora,
+                              detalle: detalle.isNotEmpty ? detalle : null,
+                            ),
+                          ),
+                        );
+                        if (editado == true && context.mounted) {
+                          Navigator.pop(context, true);
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEditar,
                         foregroundColor: Colors.white,

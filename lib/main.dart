@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:seremi_adultos_mayores/services/auth_service.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_appointment_viewmodel.dart';
 import 'package:seremi_adultos_mayores/viewmodels/alarma_presion_viewmodel.dart';
+import 'package:seremi_adultos_mayores/views/home/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_activity_viewmodel.dart';
 import 'package:seremi_adultos_mayores/viewmodels/add_measurement_viewmodel.dart';
@@ -40,7 +42,17 @@ void main() async {
   // Verificar si el sistema operativo abrió la app por una Alarma Intrusiva
   final notificationDetails = await FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails();
 
-  Widget pantallaInicial = LoginScreen();
+  // Verificar si hay sesión activa
+  final authService = AuthService();
+  final logueado = await authService.estaLogueado();
+
+  Widget pantallaInicial;
+
+  if (logueado) {
+    pantallaInicial = HomeScreen();
+  } else {
+    pantallaInicial = LoginScreen();
+  }
 
   if (notificationDetails?.didNotificationLaunchApp ?? false) {
     final payload = notificationDetails?.notificationResponse?.payload;

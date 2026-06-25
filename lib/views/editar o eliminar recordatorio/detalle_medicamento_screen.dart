@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../services/medicamento_service.dart';
+import '../../core/widgets/foto_detalle_card.dart';
+import '../../services/medicamento_service.dart'; // Asegúrate de que esta ruta apunte a tu nueva carpeta widgets
 import 'editar_medicamento_screen.dart';
 
 class DetalleMedicamentoScreen extends StatefulWidget {
@@ -195,7 +196,6 @@ class _DetalleMedicamentoScreenState extends State<DetalleMedicamentoScreen> {
                       ),
                       child: Column(
                         children: [
-                          // 👇 AQUÍ ESTÁ EL TERCER CUADRITO DE LA HORA 👇
                           _buildDetalleFila('Hora del\nrecordatorio', hora),
                           const Divider(color: colorGrisBorde, thickness: 2, height: 0),
                           _buildDetalleFila('Dosis', dosis),
@@ -251,11 +251,19 @@ class _DetalleMedicamentoScreenState extends State<DetalleMedicamentoScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildFotoCard('CAJA', fotoCaja),
+                          // 👇 LLAMAMOS A TU NUEVO WIDGET 👇
+                          child: FotoDetalleCard(
+                            etiqueta: 'CAJA',
+                            rutaFoto: fotoCaja,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildFotoCard('REMEDIO', fotoRemedio),
+                          // 👇 LLAMAMOS A TU NUEVO WIDGET 👇
+                          child: FotoDetalleCard(
+                            etiqueta: 'REMEDIO',
+                            rutaFoto: fotoRemedio,
+                          ),
                         ),
                       ],
                     ),
@@ -266,30 +274,30 @@ class _DetalleMedicamentoScreenState extends State<DetalleMedicamentoScreen> {
                       onPressed: grupoId == null
                           ? null
                           : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => EditarMedicamentoScreen(
-                                    grupoId: grupoId,
-                                    nombre: nombre,
-                                    dosis: dosis,
-                                    hora: hora,
-                                    intervalo: intervalo,
-                                    instrucciones: instrucciones.isNotEmpty ? instrucciones : null,
-                                  ),
-                                ),
-                              );
-                            },
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditarMedicamentoScreen(
+                              grupoId: grupoId,
+                              nombre: nombre,
+                              dosis: dosis,
+                              hora: hora,
+                              intervalo: intervalo,
+                              instrucciones: instrucciones.isNotEmpty ? instrucciones : null,
+                            ),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEditar,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 65),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4, // 👈 Sombras listas
+                        elevation: 4,
                       ),
                       child: const Text(
                         'Editar recordatorio',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold), // 👈 Textos en Bold
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -302,18 +310,18 @@ class _DetalleMedicamentoScreenState extends State<DetalleMedicamentoScreen> {
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 65),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4, // 👈 Sombras listas
+                        elevation: 4,
                       ),
                       child: _eliminando
                           ? const SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                            )
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                      )
                           : const Text(
-                              'Eliminar recordatorio',
-                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold), // 👈 Textos en Bold
-                            ),
+                        'Eliminar recordatorio',
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      ),
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -332,7 +340,6 @@ class _DetalleMedicamentoScreenState extends State<DetalleMedicamentoScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // 👈 El Expanded previene que se rompa el diseño con textos largos como "Hora del recordatorio"
           Expanded(
             child: Text(
               etiqueta,
@@ -354,59 +361,6 @@ class _DetalleMedicamentoScreenState extends State<DetalleMedicamentoScreen> {
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFotoCard(String etiqueta, String rutaFoto) {
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        color: colorGrisFondo,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade500, width: 2),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: rutaFoto.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
-                      child: Image.network(
-                        rutaFoto,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        loadingBuilder: (context, child, progress) =>
-                            progress == null ? child : const CircularProgressIndicator(),
-                        errorBuilder: (context, error, stack) =>
-                            Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey.shade500),
-                      ),
-                    )
-                  : Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey.shade500),
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.grey.shade500, width: 2)),
-            ),
-            child: Text(
-              etiqueta,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: colorPrimario,
-              ),
             ),
           ),
         ],

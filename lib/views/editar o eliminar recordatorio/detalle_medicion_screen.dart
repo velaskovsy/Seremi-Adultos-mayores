@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../core/widgets/foto_detalle_card.dart';
 import '../../services/medicion_service.dart';
 import 'editar_medicion_screen.dart';
 
@@ -173,7 +174,12 @@ class _DetalleMedicionScreenState extends State<DetalleMedicionScreen> {
                     const SizedBox(height: 30),
                     const Text('FOTO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
                     const SizedBox(height: 10),
-                    _buildFotoCard('INSTRUMENTO', fotoInstrumento),
+
+                    // 👇 AQUÍ LLAMAMOS AL WIDGET UNIVERSAL 👇
+                    FotoDetalleCard(
+                      etiqueta: 'INSTRUMENTO',
+                      rutaFoto: fotoInstrumento,
+                    ),
 
                     const SizedBox(height: 40),
 
@@ -182,22 +188,22 @@ class _DetalleMedicionScreenState extends State<DetalleMedicionScreen> {
                       onPressed: id == null
                           ? null
                           : () async {
-                              final editado = await Navigator.push<bool>(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => EditarMedicionScreen(
-                                    id: id,
-                                    nombre: nombre,
-                                    hora: hora,
-                                    instrucciones: instrucciones.isNotEmpty ? instrucciones : null,
-                                    urlFoto: fotoInstrumento.isNotEmpty ? fotoInstrumento : null,
-                                  ),
-                                ),
-                              );
-                              if (editado == true && context.mounted) {
-                                Navigator.pop(context, true);
-                              }
-                            },
+                        final editado = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditarMedicionScreen(
+                              id: id,
+                              nombre: nombre,
+                              hora: hora,
+                              instrucciones: instrucciones.isNotEmpty ? instrucciones : null,
+                              urlFoto: fotoInstrumento.isNotEmpty ? fotoInstrumento : null,
+                            ),
+                          ),
+                        );
+                        if (editado == true && context.mounted) {
+                          Navigator.pop(context, true);
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: botonEditar,
                         foregroundColor: Colors.white,
@@ -244,40 +250,6 @@ class _DetalleMedicionScreenState extends State<DetalleMedicionScreen> {
           Flexible(child: Text(valor, textAlign: TextAlign.right,
               style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: colorPrimario),
               maxLines: 2, overflow: TextOverflow.ellipsis)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFotoCard(String etiqueta, String rutaFoto) {
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        color: colorGrisFondo,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade500, width: 2),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: rutaFoto.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
-                      child: Image.network(rutaFoto, fit: BoxFit.cover, width: double.infinity, height: double.infinity,
-                          loadingBuilder: (context, child, progress) => progress == null ? child : const CircularProgressIndicator(),
-                          errorBuilder: (context, error, stack) => Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey.shade500)),
-                    )
-                  : Icon(Icons.camera_alt_outlined, size: 70, color: Colors.grey.shade500),
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade500, width: 2))),
-            child: Text(etiqueta, textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colorPrimario)),
-          ),
         ],
       ),
     );
